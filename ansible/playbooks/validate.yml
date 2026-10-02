@@ -1,0 +1,21 @@
+---
+- name: Validate RHCSA lab control plane
+  hosts: all
+  gather_facts: true
+
+  tasks:
+    - name: Verify host identity and operating system
+      ansible.builtin.assert:
+        that:
+          - ansible_distribution == "RedHat"
+          - ansible_distribution_major_version == "9"
+        fail_msg: "{{ inventory_hostname }} does not match the current local lab baseline."
+        success_msg: "{{ inventory_hostname }}: {{ ansible_distribution }} {{ ansible_distribution_version }} OK"
+
+    - name: Display lab node information
+      ansible.builtin.debug:
+        msg:
+          - "inventory={{ inventory_hostname }}"
+          - "fqdn={{ ansible_fqdn }}"
+          - "ipv4={{ ansible_default_ipv4.address | default('n/a') }}"
+          - "python={{ ansible_python_version }}"
