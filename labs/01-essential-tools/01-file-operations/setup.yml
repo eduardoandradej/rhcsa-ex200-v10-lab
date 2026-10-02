@@ -1,0 +1,59 @@
+---
+- name: Prepare obj01-01 file operations lab
+  hosts: servera
+  gather_facts: false
+
+  vars:
+    lab_root: /home/student/rhcsa-lab/obj01-01
+    input_dir: "{{ lab_root }}/input"
+
+  tasks:
+    - name: Remove previous exercise data
+      ansible.builtin.file:
+        path: "{{ lab_root }}"
+        state: absent
+
+    - name: Create input directory
+      ansible.builtin.file:
+        path: "{{ input_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Create report source files
+      ansible.builtin.copy:
+        dest: "{{ input_dir }}/{{ item.name }}"
+        content: "{{ item.content }}\n"
+        mode: "0644"
+      loop:
+        - name: report-alpha.txt
+          content: "alpha: systems inventory"
+        - name: report-beta.txt
+          content: "beta: storage inventory"
+        - name: report-gamma.txt
+          content: "gamma: network inventory"
+
+    - name: Create image placeholder files
+      ansible.builtin.copy:
+        dest: "{{ input_dir }}/{{ item.name }}"
+        content: "{{ item.content }}\n"
+        mode: "0644"
+      loop:
+        - name: image-01.jpg
+          content: "training-image-01"
+        - name: image-02.jpg
+          content: "training-image-02"
+
+    - name: Create notes source file
+      ansible.builtin.copy:
+        dest: "{{ input_dir }}/notes-old.txt"
+        content: "review file operations before the next lab\n"
+        mode: "0644"
+
+    - name: Create temporary files to remove
+      ansible.builtin.copy:
+        dest: "{{ input_dir }}/{{ item }}"
+        content: "temporary lab data\n"
+        mode: "0644"
+      loop:
+        - cache.tmp
+        - draft.tmp

@@ -12,11 +12,16 @@ from .common import labs_dir
 class Lab:
     id: str
     title: str
+    title_en: str
     objective: str
     targets: tuple[str, ...]
     difficulty: int
     duration: int
+    compatibility_local: str
+    compatibility_target: str
     compatibility_level: str
+    reset_policy: str
+    status: str
     path: Path
 
 
@@ -24,12 +29,25 @@ def _load_lab(path: Path) -> Lab:
     with path.open("r", encoding="utf-8") as handle:
         raw = yaml.safe_load(handle) or {}
 
-    required = ("id", "title", "objective", "target", "difficulty", "duration", "compatibility")
+    required = (
+        "id",
+        "title",
+        "objective",
+        "target",
+        "difficulty",
+        "duration",
+        "compatibility",
+    )
+
     missing = [key for key in required if key not in raw]
+
     if missing:
-        raise ValueError(f"{path}: campos ausentes: {', '.join(missing)}")
+        raise ValueError(
+            f"{path}: campos ausentes: {', '.join(missing)}"
+        )
 
     targets = raw["target"]
+
     if isinstance(targets, str):
         targets = [targets]
 
@@ -38,11 +56,26 @@ def _load_lab(path: Path) -> Lab:
     return Lab(
         id=str(raw["id"]),
         title=str(raw["title"]),
+        title_en=str(raw.get("title_en", raw["title"])),
         objective=str(raw["objective"]),
         targets=tuple(str(x) for x in targets),
         difficulty=int(raw["difficulty"]),
         duration=int(raw["duration"]),
-        compatibility_level=str(compatibility.get("level", "unknown")),
+        compatibility_local=str(
+            compatibility.get("local", "unknown")
+        ),
+        compatibility_target=str(
+            compatibility.get("target", "unknown")
+        ),
+        compatibility_level=str(
+            compatibility.get("level", "unknown")
+        ),
+        reset_policy=str(
+            raw.get("reset_policy", "manual")
+        ),
+        status=str(
+            raw.get("status", "catalog-only")
+        ),
         path=path.parent,
     )
 
@@ -60,8 +93,26 @@ def discover_labs() -> list[Lab]:
     return labs
 
 
-def by_objective(labs: Iterable[Lab]) -> dict[str, list[Lab]]:
+def find_lab(lab_id: str) -> Lab | None:
+    needle = lab_id.strip().lower()
+
+    for lab in discover_labs():
+        if lab.id.lower() == needle:
+            return lab
+
+    return None
+
+
+def by_objective(
+    labs: Iterable[Lab],
+) -> dict[str, list[Lab]]:
+
     result: dict[str, list[Lab]] = {}
+
     for lab in labs:
-        result.setdefault(lab.objective, []).append(lab)
+        result.setdefault(
+            lab.objective,
+            [],
+        ).append(lab)
+
     return result
