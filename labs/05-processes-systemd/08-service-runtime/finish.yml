@@ -1,0 +1,22 @@
+---
+- name: Finish obj05-08 runtime service-control lab
+  hosts: servera
+  gather_facts: false
+  become: true
+
+  tasks:
+    - ansible.builtin.shell: |
+        systemctl unmask rhcsa-control.service 2>/dev/null || true
+        systemctl disable --now rhcsa-control.service 2>/dev/null || true
+      changed_when: false
+
+    - ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /usr/lib/systemd/system/rhcsa-control.service
+        - /run/rhcsa-control.reload
+        - /home/student/rhcsa-lab/obj05-08
+
+    - ansible.builtin.systemd:
+        daemon_reload: true

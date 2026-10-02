@@ -1,0 +1,63 @@
+---
+- name: Finish obj05-06 TuneD lab
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    state_dir: /var/lib/rhcsa-lab/obj05-06
+
+  tasks:
+    - name: Read original TuneD profile
+      ansible.builtin.slurp:
+        src: "{{ state_dir }}/original-profile"
+      register: original_profile
+      failed_when: false
+
+    - name: Restore original TuneD profile
+      ansible.builtin.command:
+        argv:
+          - tuned-adm
+          - profile
+          - "{{ original_profile.content | default('') | b64decode | trim }}"
+      when:
+        - original_profile.content is defined
+        - (original_profile.content | b64decode | trim) | length > 0
+      failed_when: false
+      changed_when: true
+
+    - name: Read original active state
+      ansible.builtin.slurp:
+        src: "{{ state_dir }}/original-active"
+      register: original_active
+      failed_when: false
+
+    - name: Stop TuneD if it was originally inactive
+      ansible.builtin.systemd:
+        name: tuned
+        state: stopped
+      when:
+        - original_active.content is defined
+        - (original_active.content | b64decode | trim) != "active"
+      failed_when: false
+
+    - name: Read original enabled state
+      ansible.builtin.slurp:
+        src: "{{ state_dir }}/original-enabled"
+      register: original_enabled
+      failed_when: false
+
+    - name: Restore enabled state
+      ansible.builtin.command:
+        argv:
+          - systemctl
+          - "{{ 'enable' if (original_enabled.content | default('') | b64decode | trim) == 'enabled' else 'disable' }}"
+          - tuned
+      failed_when: false
+      changed_when: true
+
+    - ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /home/student/rhcsa-lab/obj05-06
+        - "{{ state_dir }}"

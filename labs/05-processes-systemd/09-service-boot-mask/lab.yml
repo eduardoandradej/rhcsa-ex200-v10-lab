@@ -1,0 +1,14 @@
+---
+id: obj05-09
+title: "Enable, disable, mask e dependências"
+title_en: "Enable, disable, mask, and dependencies"
+objective: "Objective 05 — Processes, Scheduling, Tuning & systemd"
+target: [servera]
+difficulty: 3
+duration: 22
+compatibility:
+  local: "RHEL 9.8"
+  target: "RHEL 10"
+  level: exact
+reset_policy: ansible
+status: ready

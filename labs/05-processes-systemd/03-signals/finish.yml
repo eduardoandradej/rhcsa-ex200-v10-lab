@@ -1,0 +1,14 @@
+---
+- name: Finish obj05-03 signals lab
+  hosts: servera
+  gather_facts: false
+  become: true
+
+  tasks:
+    - ansible.builtin.shell: |
+        for n in alpha beta gamma; do
+          pkill -CONT -f "^rhcsa-signal-${n}( |$)" 2>/dev/null || true
+          pkill -TERM -f "^rhcsa-signal-${n}( |$)" 2>/dev/null || true
+          rm -f "/run/rhcsa-signal-${n}.pid"
+        done
+      changed_when: false

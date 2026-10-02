@@ -1,0 +1,49 @@
+---
+- name: Prepare obj05-08 runtime service-control lab
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    root: /home/student/rhcsa-lab/obj05-08
+
+  tasks:
+    - name: Remove old service state
+      ansible.builtin.shell: |
+        systemctl unmask rhcsa-control.service 2>/dev/null || true
+        systemctl disable --now rhcsa-control.service 2>/dev/null || true
+        rm -f /run/rhcsa-control.reload
+      changed_when: false
+
+    - ansible.builtin.file:
+        path: "{{ root }}"
+        state: absent
+
+    - ansible.builtin.file:
+        path: "{{ root }}/output"
+        state: directory
+        owner: student
+        group: student
+        mode: "0755"
+
+    - ansible.builtin.copy:
+        dest: /usr/lib/systemd/system/rhcsa-control.service
+        mode: "0644"
+        content: |
+          [Unit]
+          Description=RHCSA Runtime Control Training Service
+
+          [Service]
+          Type=simple
+          ExecStart=/usr/bin/sleep infinity
+          ExecReload=/usr/bin/touch /run/rhcsa-control.reload
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - ansible.builtin.systemd:
+        daemon_reload: true
+
+    - ansible.builtin.systemd:
+        name: rhcsa-control.service
+        state: stopped
+        enabled: false

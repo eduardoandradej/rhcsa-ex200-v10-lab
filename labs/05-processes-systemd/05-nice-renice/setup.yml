@@ -1,0 +1,46 @@
+---
+- name: Prepare obj05-05 nice and renice lab
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    root: /home/student/rhcsa-lab/obj05-05
+
+  tasks:
+    - ansible.builtin.shell: |
+        pkill -TERM -f '^rhcsa-nice-start( |$)' 2>/dev/null || true
+        pkill -TERM -f '^rhcsa-nice-change( |$)' 2>/dev/null || true
+      changed_when: false
+
+    - ansible.builtin.file:
+        path: "{{ root }}"
+        state: absent
+
+    - ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: student
+        group: student
+        mode: "0755"
+      loop:
+        - "{{ root }}"
+        - "{{ root }}/assets"
+        - "{{ root }}/output"
+
+    - ansible.builtin.copy:
+        dest: "{{ root }}/assets/nice-start"
+        owner: student
+        group: student
+        mode: "0755"
+        content: |
+          #!/bin/bash
+          exec -a rhcsa-nice-start /usr/bin/sleep 900
+
+    - ansible.builtin.copy:
+        dest: "{{ root }}/assets/nice-change"
+        owner: student
+        group: student
+        mode: "0755"
+        content: |
+          #!/bin/bash
+          exec -a rhcsa-nice-change /usr/bin/sleep 900

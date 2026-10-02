@@ -7,15 +7,15 @@
 | 01 | Essential Tools | 10 — concluído |
 | 02 | Users & Groups | 8 — concluído |
 | 03 | RPM, DNF & Repositories | 8 — concluído |
-| 04 | Simple Shell Scripts | 8 — implementação v1.0.0 |
+| 04 | Simple Shell Scripts | 8 — concluído |
+| 05 | Processes, Scheduling, Tuning & systemd | 10 — implementação v1.1.0 |
 
-Total após esta entrega: **34 labs**.
+Total após esta entrega: **44 labs**.
 
 ## Próximos blocos
 
 | Objective | Tema | Labs estimados |
 |---|---|---:|
-| 05 | Processos e serviços systemd | 9 |
 | 06 | Networking / NetworkManager | 8 |
 | 07 | Scheduling, logs e chrony | 8 |
 | 08 | Storage, swap e LVM | 12 |
@@ -24,16 +24,20 @@ Total após esta entrega: **34 labs**.
 | 11 | NFS e autofs | 6 |
 | 12 | Simulados integrados EX200 | 6 |
 
-## Critério de qualidade
+> A estimativa original de 9 labs para OBJ05 foi ampliada para 10 para
+> manter separado o treinamento de job control, sinais, nice/renice,
+> TuneD e os três níveis de gerenciamento systemd.
 
-Cada laboratório `ready` inclui:
+## Quality gate
 
-- preparação idempotente;
-- enunciado PT-BR e EN;
-- grader por estado/comportamento;
-- limpeza;
-- solução de referência;
-- solver de regressão automatizado.
+Each ready lab includes:
 
-A release gate valida Python, YAML, Ansible, contrato `--json`, sintaxe dos
-reference solvers e smoke da CLI.
+- setup;
+- PT-BR and EN prompts;
+- behavior/state grader;
+- finish/cleanup;
+- reference solution;
+- automated reference solver.
+
+The release gate validates Python, shell syntax, YAML contracts, grader
+`--json`, Ansible syntax, and CLI smoke.

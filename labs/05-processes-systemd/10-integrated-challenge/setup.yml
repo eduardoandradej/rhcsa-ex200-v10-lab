@@ -1,0 +1,156 @@
+---
+- name: Prepare obj05-10 integrated challenge
+  hosts: serverb
+  gather_facts: false
+  become: true
+  vars:
+    root: /home/student/rhcsa-lab/obj05-10
+    state_dir: /var/lib/rhcsa-lab/obj05-10
+
+  tasks:
+    - name: Clean old exercise processes
+      ansible.builtin.shell: |
+        pkill -TERM -f '^rhcsa-rogue-cpu( |$)' 2>/dev/null || true
+        pkill -TERM -f '^rhcsa-batch-worker( |$)' 2>/dev/null || true
+      changed_when: false
+
+    - name: Clear old systemd state
+      ansible.builtin.shell: |
+        for svc in rhcsa-api.service rhcsa-legacy.service; do
+          systemctl unmask "$svc" 2>/dev/null || true
+          systemctl disable --now "$svc" 2>/dev/null || true
+        done
+      changed_when: false
+
+    - ansible.builtin.file:
+        path: "{{ root }}"
+        state: absent
+
+    - ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: student
+        group: student
+        mode: "0755"
+      loop:
+        - "{{ root }}"
+        - "{{ root }}/assets"
+        - "{{ root }}/output"
+
+    - ansible.builtin.file:
+        path: "{{ state_dir }}"
+        state: directory
+        mode: "0700"
+
+    - ansible.builtin.copy:
+        dest: "{{ root }}/assets/batch-worker"
+        owner: student
+        group: student
+        mode: "0755"
+        content: |
+          #!/bin/bash
+          exec -a rhcsa-batch-worker /usr/bin/sleep 900
+
+    - ansible.builtin.copy:
+        dest: /usr/lib/systemd/system/rhcsa-api.service
+        mode: "0644"
+        content: |
+          [Unit]
+          Description=RHCSA API Training Service
+
+          [Service]
+          Type=simple
+          ExecStart=/usr/bin/sleep infinity
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - ansible.builtin.copy:
+        dest: /usr/lib/systemd/system/rhcsa-legacy.service
+        mode: "0644"
+        content: |
+          [Unit]
+          Description=RHCSA Legacy Training Service
+
+          [Service]
+          Type=simple
+          ExecStart=/usr/bin/sleep infinity
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - ansible.builtin.systemd:
+        daemon_reload: true
+
+    - ansible.builtin.systemd:
+        name: rhcsa-api.service
+        state: stopped
+        enabled: false
+
+    - ansible.builtin.systemd:
+        name: rhcsa-legacy.service
+        state: started
+        enabled: true
+
+    - name: Record original TuneD active state
+      ansible.builtin.shell: |
+        systemctl is-active tuned 2>/dev/null || true
+      register: tuned_active
+      changed_when: false
+
+    - name: Record original TuneD enabled state
+      ansible.builtin.shell: |
+        systemctl is-enabled tuned 2>/dev/null || true
+      register: tuned_enabled
+      changed_when: false
+
+    - ansible.builtin.copy:
+        dest: "{{ state_dir }}/original-active"
+        content: "{{ tuned_active.stdout | trim }}\n"
+        mode: "0600"
+
+    - ansible.builtin.copy:
+        dest: "{{ state_dir }}/original-enabled"
+        content: "{{ tuned_enabled.stdout | trim }}\n"
+        mode: "0600"
+
+    - ansible.builtin.systemd:
+        name: tuned
+        state: started
+
+    - name: Record original TuneD profile
+      ansible.builtin.shell: |
+        tuned-adm active | sed -n 's/^Current active profile: //p'
+      register: tuned_profile
+      changed_when: false
+
+    - ansible.builtin.copy:
+        dest: "{{ state_dir }}/original-profile"
+        content: "{{ tuned_profile.stdout | trim }}\n"
+        mode: "0600"
+
+    - name: Verify integrated target tuning profile exists
+      ansible.builtin.shell: |
+        tuned-adm list | grep -q 'balanced'
+      changed_when: false
+
+    - name: Start rogue CPU process as student
+      ansible.builtin.shell: |
+        nohup bash -c \
+          "exec -a rhcsa-rogue-cpu python3 -c 'while True: pass'" \
+          >/dev/null 2>&1 &
+        echo $!
+      become_user: student
+      register: rogue_cpu
+      changed_when: true
+
+    - name: Publish rogue CPU PID
+      ansible.builtin.copy:
+        dest: /run/rhcsa-rogue-cpu.pid
+        content: "{{ rogue_cpu.stdout | trim }}\n"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - ansible.builtin.pause:
+        seconds: 2

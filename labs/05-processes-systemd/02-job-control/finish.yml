@@ -1,0 +1,17 @@
+---
+- name: Finish obj05-02 job-control lab
+  hosts: servera
+  gather_facts: false
+  become: true
+
+  tasks:
+    - ansible.builtin.shell: |
+        pkill -CONT -f '^rhcsa-job-alpha( |$)' 2>/dev/null || true
+        pkill -TERM -f '^rhcsa-job-alpha( |$)' 2>/dev/null || true
+        pkill -CONT -f '^rhcsa-job-beta( |$)' 2>/dev/null || true
+        pkill -TERM -f '^rhcsa-job-beta( |$)' 2>/dev/null || true
+      changed_when: false
+
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj05-02
+        state: absent

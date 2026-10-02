@@ -16,10 +16,15 @@ done < <(
     find "$ROOT/tests/reference-solutions" -type f -name '*.sh' | sort
 )
 
-bash -n "$ROOT/tests/integration-reference.sh"
-bash -n "$ROOT/tests/integration-objective04.sh"
-echo "OK tests/integration-reference.sh"
-echo "OK tests/integration-objective04.sh"
+for script in \
+    "$ROOT/tests/integration-reference.sh" \
+    "$ROOT/tests/integration-objective04.sh" \
+    "$ROOT/tests/integration-objective05.sh"
+do
+    [[ -f "$script" ]] || continue
+    bash -n "$script"
+    echo "OK ${script#"$ROOT"/}"
+done
 
 echo "== YAML catalog and ready-lab contract =="
 python3 - <<'PY'
@@ -38,10 +43,12 @@ ready_files = (
 for path in sorted(Path("labs").glob("*/*/lab.yml")):
     data = yaml.safe_load(path.read_text()) or {}
     missing = required - set(data)
+
     if missing:
         raise SystemExit(f"{path}: missing {sorted(missing)}")
 
     status = data.get("status", "catalog-only")
+
     if status == "ready":
         for name in ready_files:
             if not (path.parent / name).is_file():
@@ -86,10 +93,12 @@ PY
 echo "== Ansible syntax =="
 cd "$ROOT/ansible"
 
-if [[ -f prepare-objective03.yml ]]; then
-    ansible-playbook --syntax-check prepare-objective03.yml >/dev/null
-    echo "OK ansible/prepare-objective03.yml"
-fi
+for prereq in prepare-objective03.yml prepare-objective05.yml; do
+    if [[ -f "$prereq" ]]; then
+        ansible-playbook --syntax-check "$prereq" >/dev/null
+        echo "OK ansible/$prereq"
+    fi
+done
 
 while IFS= read -r playbook; do
     ansible-playbook --syntax-check "$playbook" >/dev/null

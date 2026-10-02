@@ -1,0 +1,21 @@
+---
+- name: Finish obj05-01 process inventory lab
+  hosts: servera
+  gather_facts: false
+  become: true
+
+  tasks:
+    - ansible.builtin.shell: |
+        pkill -CONT -f '^rhcsa-proc-sleeper( |$)' 2>/dev/null || true
+        pkill -TERM -f '^rhcsa-proc-sleeper( |$)' 2>/dev/null || true
+        pkill -CONT -f '^rhcsa-proc-stopped( |$)' 2>/dev/null || true
+        pkill -TERM -f '^rhcsa-proc-stopped( |$)' 2>/dev/null || true
+      changed_when: false
+
+    - ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /run/rhcsa-proc-sleeper.pid
+        - /run/rhcsa-proc-stopped.pid
+        - /home/student/rhcsa-lab/obj05-01

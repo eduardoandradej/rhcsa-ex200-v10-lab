@@ -5,6 +5,13 @@ ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 if [[ "$#" -eq 0 ]]; then
+    echo "===== Full regression prerequisites ====="
+    (
+        cd "$ROOT/ansible"
+        [[ -f prepare-objective03.yml ]] && ansible-playbook prepare-objective03.yml
+        [[ -f prepare-objective05.yml ]] && ansible-playbook prepare-objective05.yml
+    )
+
     LABS=(
         obj01-01 obj01-02 obj01-03 obj01-04 obj01-05
         obj01-06 obj01-07 obj01-08 obj01-09 obj01-10
@@ -14,6 +21,8 @@ if [[ "$#" -eq 0 ]]; then
         obj03-05 obj03-06 obj03-07 obj03-08
         obj04-01 obj04-02 obj04-03 obj04-04
         obj04-05 obj04-06 obj04-07 obj04-08
+        obj05-01 obj05-02 obj05-03 obj05-04 obj05-05
+        obj05-06 obj05-07 obj05-08 obj05-09 obj05-10
     )
 else
     LABS=("$@")
@@ -35,6 +44,7 @@ fail_step() {
 
 for id in "${LABS[@]}"; do
     solver="$ROOT/tests/reference-solutions/${id}.sh"
+
     [[ -x "$solver" ]] || {
         echo "REFERENCE TEST: FAIL ($id)"
         echo "Reference solver ausente"
@@ -71,6 +81,7 @@ for id in "${LABS[@]}"; do
     out="$("$ROOT/bin/lab" grade "$id" 2>&1)"; rc=$?
     set -e
     printf '%s\n' "$out"
+
     if [[ "$rc" -ne 0 ]] || ! grep -q 'Score: 100%' <<<"$out"; then
         fail_step "$id" "lab grade" "$rc"
     fi
@@ -83,6 +94,7 @@ for id in "${LABS[@]}"; do
         printf '%s\n' "$out"
         fail_step "$id" "lab finish" "$rc"
     }
+
     echo "REFERENCE TEST: PASS ($id)"
 done
 

@@ -1,0 +1,24 @@
+---
+- name: Finish obj05-09 boot and mask service lab
+  hosts: servera
+  gather_facts: false
+  become: true
+
+  tasks:
+    - ansible.builtin.shell: |
+        for svc in rhcsa-boot.service rhcsa-blocked.service; do
+          systemctl unmask "$svc" 2>/dev/null || true
+          systemctl disable --now "$svc" 2>/dev/null || true
+        done
+      changed_when: false
+
+    - ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /usr/lib/systemd/system/rhcsa-boot.service
+        - /usr/lib/systemd/system/rhcsa-blocked.service
+        - /home/student/rhcsa-lab/obj05-09
+
+    - ansible.builtin.systemd:
+        daemon_reload: true

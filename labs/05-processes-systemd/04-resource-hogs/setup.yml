@@ -1,0 +1,66 @@
+---
+- name: Prepare obj05-04 resource monitoring lab
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    root: /home/student/rhcsa-lab/obj05-04
+
+  tasks:
+    - name: Remove old resource exercise processes
+      ansible.builtin.shell: |
+        pkill -TERM -f '^rhcsa-cpu-hog( |$)' 2>/dev/null || true
+        pkill -TERM -f '^rhcsa-mem-hog( |$)' 2>/dev/null || true
+        rm -f /run/rhcsa-cpu-hog.pid /run/rhcsa-mem-hog.pid
+      changed_when: false
+
+    - ansible.builtin.file:
+        path: "{{ root }}"
+        state: absent
+
+    - ansible.builtin.file:
+        path: "{{ root }}/output"
+        state: directory
+        owner: student
+        group: student
+        mode: "0755"
+
+    - name: Start CPU-intensive process as student
+      ansible.builtin.shell: |
+        nohup bash -c \
+          "exec -a rhcsa-cpu-hog python3 -c 'while True: pass'" \
+          >/dev/null 2>&1 &
+        echo $!
+      become_user: student
+      register: cpu_hog
+      changed_when: true
+
+    - name: Publish CPU hog PID
+      ansible.builtin.copy:
+        dest: /run/rhcsa-cpu-hog.pid
+        content: "{{ cpu_hog.stdout | trim }}\n"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Start memory-intensive process as student
+      ansible.builtin.shell: |
+        nohup bash -c \
+          "exec -a rhcsa-mem-hog python3 -c 'import time; x=bytearray(128*1024*1024); time.sleep(900)'" \
+          >/dev/null 2>&1 &
+        echo $!
+      become_user: student
+      register: mem_hog
+      changed_when: true
+
+    - name: Publish memory hog PID
+      ansible.builtin.copy:
+        dest: /run/rhcsa-mem-hog.pid
+        content: "{{ mem_hog.stdout | trim }}\n"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Allow metrics to accumulate
+      ansible.builtin.pause:
+        seconds: 2

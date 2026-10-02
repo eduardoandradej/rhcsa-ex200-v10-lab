@@ -1,0 +1,46 @@
+---
+- name: Prepare obj05-03 signals lab
+  hosts: servera
+  gather_facts: false
+  become: true
+
+  tasks:
+    - name: Remove old signal exercise processes
+      ansible.builtin.shell: |
+        for n in alpha beta gamma; do
+          pkill -CONT -f "^rhcsa-signal-${n}( |$)" 2>/dev/null || true
+          pkill -TERM -f "^rhcsa-signal-${n}( |$)" 2>/dev/null || true
+          rm -f "/run/rhcsa-signal-${n}.pid"
+        done
+      changed_when: false
+
+    - name: Start signal processes as student
+      ansible.builtin.shell: |
+        nohup bash -c "exec -a rhcsa-signal-{{ item }} /usr/bin/sleep 900" \
+          >/dev/null 2>&1 &
+        echo $!
+      become_user: student
+      loop:
+        - alpha
+        - beta
+        - gamma
+      register: signal_processes
+      changed_when: true
+
+    - name: Publish signal process PID files
+      ansible.builtin.copy:
+        dest: "/run/rhcsa-signal-{{ item.item }}.pid"
+        content: "{{ item.stdout | trim }}\n"
+        owner: root
+        group: root
+        mode: "0644"
+      loop: "{{ signal_processes.results }}"
+
+    - name: Stop gamma before the exercise
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/kill
+          - -s
+          - STOP
+          - "{{ signal_processes.results[2].stdout | trim }}"
+      changed_when: true

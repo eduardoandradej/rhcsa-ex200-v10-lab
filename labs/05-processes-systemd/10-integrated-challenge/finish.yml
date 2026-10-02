@@ -1,0 +1,86 @@
+---
+- name: Finish obj05-10 integrated challenge
+  hosts: serverb
+  gather_facts: false
+  become: true
+  vars:
+    state_dir: /var/lib/rhcsa-lab/obj05-10
+
+  tasks:
+    - ansible.builtin.shell: |
+        pkill -TERM -f '^rhcsa-rogue-cpu( |$)' 2>/dev/null || true
+        pkill -TERM -f '^rhcsa-batch-worker( |$)' 2>/dev/null || true
+        rm -f /run/rhcsa-rogue-cpu.pid
+      changed_when: false
+
+    - ansible.builtin.shell: |
+        for svc in rhcsa-api.service rhcsa-legacy.service; do
+          systemctl unmask "$svc" 2>/dev/null || true
+          systemctl disable --now "$svc" 2>/dev/null || true
+        done
+      changed_when: false
+
+    - ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /usr/lib/systemd/system/rhcsa-api.service
+        - /usr/lib/systemd/system/rhcsa-legacy.service
+
+    - ansible.builtin.systemd:
+        daemon_reload: true
+
+    - name: Read original TuneD profile
+      ansible.builtin.slurp:
+        src: "{{ state_dir }}/original-profile"
+      register: original_profile
+      failed_when: false
+
+    - name: Restore original TuneD profile
+      ansible.builtin.command:
+        argv:
+          - tuned-adm
+          - profile
+          - "{{ original_profile.content | default('') | b64decode | trim }}"
+      when:
+        - original_profile.content is defined
+        - (original_profile.content | b64decode | trim) | length > 0
+      failed_when: false
+      changed_when: true
+
+    - name: Read original TuneD active state
+      ansible.builtin.slurp:
+        src: "{{ state_dir }}/original-active"
+      register: original_active
+      failed_when: false
+
+    - name: Stop TuneD if it was originally inactive
+      ansible.builtin.systemd:
+        name: tuned
+        state: stopped
+      when:
+        - original_active.content is defined
+        - (original_active.content | b64decode | trim) != "active"
+      failed_when: false
+
+    - name: Read original TuneD enabled state
+      ansible.builtin.slurp:
+        src: "{{ state_dir }}/original-enabled"
+      register: original_enabled
+      failed_when: false
+
+    - name: Restore TuneD enabled state
+      ansible.builtin.command:
+        argv:
+          - systemctl
+          - "{{ 'enable' if (original_enabled.content | default('') | b64decode | trim) == 'enabled' else 'disable' }}"
+          - tuned
+      failed_when: false
+      changed_when: true
+
+    - ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /home/student/rhcsa-lab/obj05-10
+        - "{{ state_dir }}"

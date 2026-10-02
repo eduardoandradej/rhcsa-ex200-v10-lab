@@ -1,0 +1,48 @@
+---
+- name: Prepare obj05-02 job-control lab
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    root: /home/student/rhcsa-lab/obj05-02
+
+  tasks:
+    - ansible.builtin.shell: |
+        pkill -CONT -f '^rhcsa-job-alpha( |$)' 2>/dev/null || true
+        pkill -TERM -f '^rhcsa-job-alpha( |$)' 2>/dev/null || true
+        pkill -CONT -f '^rhcsa-job-beta( |$)' 2>/dev/null || true
+        pkill -TERM -f '^rhcsa-job-beta( |$)' 2>/dev/null || true
+      changed_when: false
+
+    - ansible.builtin.file:
+        path: "{{ root }}"
+        state: absent
+
+    - ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: student
+        group: student
+        mode: "0755"
+      loop:
+        - "{{ root }}"
+        - "{{ root }}/assets"
+        - "{{ root }}/output"
+
+    - ansible.builtin.copy:
+        dest: "{{ root }}/assets/job-alpha"
+        owner: student
+        group: student
+        mode: "0755"
+        content: |
+          #!/bin/bash
+          exec -a rhcsa-job-alpha /usr/bin/sleep 900
+
+    - ansible.builtin.copy:
+        dest: "{{ root }}/assets/job-beta"
+        owner: student
+        group: student
+        mode: "0755"
+        content: |
+          #!/bin/bash
+          exec -a rhcsa-job-beta /usr/bin/sleep 900

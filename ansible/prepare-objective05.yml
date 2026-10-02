@@ -1,0 +1,26 @@
+---
+- name: Prepare dependencies for Objective 05
+  hosts: managed
+  gather_facts: false
+  become: true
+
+  tasks:
+    - name: Ensure process and tuning tools are available
+      ansible.builtin.dnf:
+        name:
+          - procps-ng
+          - psmisc
+          - tuned
+        state: present
+
+    - name: Verify required commands
+      ansible.builtin.shell: "command -v {{ item }}"
+      loop:
+        - ps
+        - pgrep
+        - pkill
+        - nice
+        - renice
+        - systemctl
+        - tuned-adm
+      changed_when: false

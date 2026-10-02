@@ -1,0 +1,68 @@
+---
+- name: Prepare obj05-06 TuneD lab
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    root: /home/student/rhcsa-lab/obj05-06
+    state_dir: /var/lib/rhcsa-lab/obj05-06
+
+  tasks:
+    - ansible.builtin.file:
+        path: "{{ root }}"
+        state: absent
+
+    - ansible.builtin.file:
+        path: "{{ root }}/output"
+        state: directory
+        owner: student
+        group: student
+        mode: "0755"
+
+    - ansible.builtin.file:
+        path: "{{ state_dir }}"
+        state: directory
+        mode: "0700"
+
+    - name: Record original TuneD active state
+      ansible.builtin.shell: |
+        systemctl is-active tuned 2>/dev/null || true
+      register: tuned_active
+      changed_when: false
+
+    - name: Record original TuneD enabled state
+      ansible.builtin.shell: |
+        systemctl is-enabled tuned 2>/dev/null || true
+      register: tuned_enabled
+      changed_when: false
+
+    - ansible.builtin.copy:
+        dest: "{{ state_dir }}/original-active"
+        content: "{{ tuned_active.stdout | trim }}\n"
+        mode: "0600"
+
+    - ansible.builtin.copy:
+        dest: "{{ state_dir }}/original-enabled"
+        content: "{{ tuned_enabled.stdout | trim }}\n"
+        mode: "0600"
+
+    - name: Start TuneD for the exercise
+      ansible.builtin.systemd:
+        name: tuned
+        state: started
+
+    - name: Record active profile after starting TuneD
+      ansible.builtin.shell: |
+        tuned-adm active | sed -n 's/^Current active profile: //p'
+      register: tuned_profile
+      changed_when: false
+
+    - ansible.builtin.copy:
+        dest: "{{ state_dir }}/original-profile"
+        content: "{{ tuned_profile.stdout | trim }}\n"
+        mode: "0600"
+
+    - name: Verify target profile exists
+      ansible.builtin.shell: |
+        tuned-adm list | grep -q 'throughput-performance'
+      changed_when: false

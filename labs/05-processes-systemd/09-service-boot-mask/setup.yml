@@ -1,0 +1,70 @@
+---
+- name: Prepare obj05-09 boot and mask service lab
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    root: /home/student/rhcsa-lab/obj05-09
+
+  tasks:
+    - name: Clear old service state
+      ansible.builtin.shell: |
+        for svc in rhcsa-boot.service rhcsa-blocked.service; do
+          systemctl unmask "$svc" 2>/dev/null || true
+          systemctl disable --now "$svc" 2>/dev/null || true
+        done
+      changed_when: false
+
+    - ansible.builtin.file:
+        path: "{{ root }}"
+        state: absent
+
+    - ansible.builtin.file:
+        path: "{{ root }}/output"
+        state: directory
+        owner: student
+        group: student
+        mode: "0755"
+
+    - ansible.builtin.copy:
+        dest: /usr/lib/systemd/system/rhcsa-boot.service
+        mode: "0644"
+        content: |
+          [Unit]
+          Description=RHCSA Boot Training Service
+          Wants=network.target
+          After=network.target
+
+          [Service]
+          Type=simple
+          ExecStart=/usr/bin/sleep infinity
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - ansible.builtin.copy:
+        dest: /usr/lib/systemd/system/rhcsa-blocked.service
+        mode: "0644"
+        content: |
+          [Unit]
+          Description=RHCSA Service To Be Masked
+
+          [Service]
+          Type=simple
+          ExecStart=/usr/bin/sleep infinity
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - ansible.builtin.systemd:
+        daemon_reload: true
+
+    - ansible.builtin.systemd:
+        name: rhcsa-boot.service
+        state: stopped
+        enabled: false
+
+    - ansible.builtin.systemd:
+        name: rhcsa-blocked.service
+        state: started
+        enabled: true

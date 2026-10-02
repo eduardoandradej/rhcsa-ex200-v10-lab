@@ -1,0 +1,10 @@
+---
+- name: Finish obj05-07 systemd inventory lab
+  hosts: servera
+  gather_facts: false
+  become: true
+
+  tasks:
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj05-07
+        state: absent

@@ -1,0 +1,48 @@
+---
+- name: Prepare obj05-01 process inventory lab
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    root: /home/student/rhcsa-lab/obj05-01
+
+  tasks:
+    - name: Remove old exercise processes
+      ansible.builtin.shell: |
+        pkill -CONT -f '^rhcsa-proc-sleeper( |$)' 2>/dev/null || true
+        pkill -TERM -f '^rhcsa-proc-sleeper( |$)' 2>/dev/null || true
+        pkill -CONT -f '^rhcsa-proc-stopped( |$)' 2>/dev/null || true
+        pkill -TERM -f '^rhcsa-proc-stopped( |$)' 2>/dev/null || true
+      changed_when: false
+
+    - ansible.builtin.file:
+        path: "{{ root }}"
+        state: absent
+
+    - ansible.builtin.file:
+        path: "{{ root }}/output"
+        state: directory
+        owner: student
+        group: student
+        mode: "0755"
+
+    - name: Start sleeping exercise process
+      ansible.builtin.shell: |
+        nohup bash -c 'exec -a rhcsa-proc-sleeper /usr/bin/sleep 900' \
+          >/dev/null 2>&1 &
+        echo $! > /run/rhcsa-proc-sleeper.pid
+        chmod 0644 /run/rhcsa-proc-sleeper.pid
+      changed_when: true
+
+    - name: Start process that will be stopped
+      ansible.builtin.shell: |
+        nohup bash -c 'exec -a rhcsa-proc-stopped /usr/bin/sleep 900' \
+          >/dev/null 2>&1 &
+        echo $! > /run/rhcsa-proc-stopped.pid
+        chmod 0644 /run/rhcsa-proc-stopped.pid
+      changed_when: true
+
+    - name: Stop the second process with SIGSTOP
+      ansible.builtin.shell: |
+        /usr/bin/kill -s STOP "$(cat /run/rhcsa-proc-stopped.pid)"
+      changed_when: true

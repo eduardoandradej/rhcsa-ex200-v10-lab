@@ -1,0 +1,14 @@
+---
+id: obj05-05
+title: "Ajustar prioridade com nice e renice"
+title_en: "Adjust process priority with nice and renice"
+objective: "Objective 05 — Processes, Scheduling, Tuning & systemd"
+target: [servera]
+difficulty: 2
+duration: 20
+compatibility:
+  local: "RHEL 9.8"
+  target: "RHEL 10"
+  level: exact
+reset_policy: ansible
+status: ready
