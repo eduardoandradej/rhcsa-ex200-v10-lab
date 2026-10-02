@@ -1,0 +1,102 @@
+---
+- name: Prepare RHCSA lab dependency bundle on control plane
+  hosts: control
+  gather_facts: false
+  become: true
+
+  vars_files:
+    - ../vars/lab_dependencies.yml
+
+  vars:
+    bundle_dir: /var/tmp/rhcsa-baseline-rpms
+
+  tasks:
+    - name: Install control plane dependencies
+      ansible.builtin.dnf:
+        name: "{{ control_plane_packages }}"
+        state: present
+
+    - name: Recreate local RPM bundle directory
+      ansible.builtin.file:
+        path: "{{ bundle_dir }}"
+        state: absent
+
+    - name: Create local RPM bundle directory
+      ansible.builtin.file:
+        path: "{{ bundle_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Download complete managed-node dependency bundle
+      ansible.builtin.shell: >
+        dnf -y download
+        --resolve
+        --alldeps
+        --destdir {{ bundle_dir }}
+        {{ managed_baseline_packages | join(' ') }}
+      args:
+        executable: /bin/bash
+      changed_when: true
+
+    - name: Inspect downloaded RPM bundle
+      ansible.builtin.find:
+        paths: "{{ bundle_dir }}"
+        patterns: "*.rpm"
+        file_type: file
+      register: baseline_rpms
+
+    - name: Require a non-empty dependency bundle
+      ansible.builtin.assert:
+        that:
+          - baseline_rpms.matched | int > 0
+        fail_msg: >-
+          No RPMs were downloaded. Verify the bastion local RHEL repositories
+          before continuing.
+
+- name: Install RHCSA baseline dependencies on managed nodes
+  hosts: managed
+  gather_facts: false
+  become: true
+
+  vars_files:
+    - ../vars/lab_dependencies.yml
+
+  vars:
+    controller_bundle_dir: /var/tmp/rhcsa-baseline-rpms
+    remote_bundle_dir: /var/tmp/rhcsa-baseline-rpms
+
+  tasks:
+    - name: Recreate remote RPM bundle directory
+      ansible.builtin.file:
+        path: "{{ remote_bundle_dir }}"
+        state: absent
+
+    - name: Create remote RPM bundle directory
+      ansible.builtin.file:
+        path: "{{ remote_bundle_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Copy dependency bundle from bastion
+      ansible.builtin.copy:
+        src: "{{ controller_bundle_dir }}/"
+        dest: "{{ remote_bundle_dir }}/"
+        mode: preserve
+
+    - name: Install baseline packages from local RPM bundle
+      ansible.builtin.shell: |
+        dnf -y \
+          --disablerepo='*' \
+          --setopt=install_weak_deps=False \
+          install {{ remote_bundle_dir }}/*.rpm
+      args:
+        executable: /bin/bash
+      register: baseline_install
+      changed_when: >
+        'Nothing to do.' not in baseline_install.stdout and
+        'Nothing to do' not in baseline_install.stdout
+
+    - name: Remove temporary RPM bundle from managed node
+      ansible.builtin.file:
+        path: "{{ remote_bundle_dir }}"
+        state: absent

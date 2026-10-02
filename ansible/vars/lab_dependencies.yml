@@ -1,0 +1,87 @@
+---
+# Pacotes do control plane. O Ansible já deve estar instalado para executar
+# o bootstrap; esta lista cobre o restante da infraestrutura do laboratório.
+control_plane_packages:
+  - dnf-plugins-core
+  - git
+  - rsync
+  - curl
+  - tar
+  - gzip
+  - bzip2
+  - xz
+  - vim-enhanced
+  - man-db
+  - man-pages
+  - openssh-clients
+
+# Baseline das VMs de prática. A instalação é infraestrutura do laboratório,
+# não parte da resolução dos exercícios.
+managed_baseline_packages:
+  - bzip2
+  - gzip
+  - xz
+  - tar
+  - vim-enhanced
+  - man-db
+  - man-pages
+  - openssh-clients
+  - rsync
+  - tree
+  - lsof
+  - psmisc
+  - acl
+  - attr
+  - policycoreutils-python-utils
+  - setools-console
+  - parted
+  - lvm2
+  - xfsprogs
+  - e2fsprogs
+  - nfs-utils
+  - autofs
+  - chrony
+  - firewalld
+  - NetworkManager
+  - httpd
+
+control_plane_required_commands:
+  - ansible
+  - ansible-playbook
+  - git
+  - ssh
+  - rsync
+  - curl
+  - tar
+  - gzip
+  - bzip2
+  - xz
+  - python3
+  - dnf
+
+managed_required_commands:
+  - ssh
+  - tar
+  - gzip
+  - bzip2
+  - xz
+  - vim
+  - man
+  - getfacl
+  - setfacl
+  - getfattr
+  - setfattr
+  - semanage
+  - restorecon
+  - parted
+  - pvcreate
+  - vgcreate
+  - lvcreate
+  - mkfs.xfs
+  - mkfs.ext4
+  - showmount
+  - automount
+  - chronyc
+  - firewall-cmd
+  - nmcli
+  - httpd

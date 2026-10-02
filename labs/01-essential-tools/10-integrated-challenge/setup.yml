@@ -1,0 +1,136 @@
+---
+- name: Prepare obj01-10 integrated Essential Tools challenge
+  hosts: servera
+  gather_facts: false
+
+  vars:
+    root: /home/student/rhcsa-lab/obj01-10
+
+  tasks:
+    - name: Remove previous exercise data
+      ansible.builtin.file:
+        path: "{{ root }}"
+        state: absent
+
+    - name: Create input directory
+      ansible.builtin.file:
+        path: "{{ root }}/input"
+        state: directory
+        mode: "0755"
+
+    - name: Create report source
+      ansible.builtin.copy:
+        dest: "{{ root }}/input/report.txt"
+        mode: "0644"
+        content: |
+          INCIDENT=RHCSA-042
+          OWNER=student
+          STATUS=PENDING
+          CLASSIFICATION=internal
+
+    - name: Create systems data
+      ansible.builtin.copy:
+        dest: "{{ root }}/input/systems.txt"
+        mode: "0644"
+        content: |
+          SRV-101|web01|prod|active|192.168.10.11
+          SRV-102|web02|dev|active|192.168.10.12
+          SRV-103|db01|prod|active|192.168.10.21
+          SRV-104|api01|prod|inactive|192.168.10.31
+          SRV-105|cache01|prod|active|192.168.10.41
+
+    - name: Create event log
+      ansible.builtin.copy:
+        dest: "{{ root }}/input/events.log"
+        mode: "0644"
+        content: |
+          INFO service web01 started
+          WARN cache threshold reached
+          INFO backup started
+          ERROR backup failed
+          INFO service db01 healthy
+
+    - name: Ensure student SSH directory exists on servera
+      become: true
+      ansible.builtin.file:
+        path: /home/student/.ssh
+        state: directory
+        owner: student
+        group: student
+        mode: "0700"
+
+    - name: Generate student SSH key on servera
+      become: true
+      become_user: student
+      ansible.builtin.command:
+        cmd: ssh-keygen -q -t ed25519 -N '' -f /home/student/.ssh/id_ed25519
+        creates: /home/student/.ssh/id_ed25519
+
+    - name: Read servera student public key
+      become: true
+      ansible.builtin.slurp:
+        src: /home/student/.ssh/id_ed25519.pub
+      register: servera_student_pubkey
+
+    - name: Ensure student SSH directory exists on serverb
+      delegate_to: serverb
+      become: true
+      ansible.builtin.file:
+        path: /home/student/.ssh
+        state: directory
+        owner: student
+        group: student
+        mode: "0700"
+
+    - name: Ensure authorized_keys exists on serverb
+      delegate_to: serverb
+      become: true
+      ansible.builtin.file:
+        path: /home/student/.ssh/authorized_keys
+        state: touch
+        owner: student
+        group: student
+        mode: "0600"
+        modification_time: preserve
+        access_time: preserve
+
+    - name: Authorize servera student key on serverb
+      delegate_to: serverb
+      become: true
+      ansible.builtin.lineinfile:
+        path: /home/student/.ssh/authorized_keys
+        line: "{{ servera_student_pubkey.content | b64decode | trim }}"
+        owner: student
+        group: student
+        mode: "0600"
+        create: true
+
+    - name: Refresh serverb host keys in servera known_hosts
+      become: true
+      become_user: student
+      ansible.builtin.shell: |
+        set -e
+        touch /home/student/.ssh/known_hosts
+        chmod 0600 /home/student/.ssh/known_hosts
+
+        ssh-keygen -R serverb -f /home/student/.ssh/known_hosts >/dev/null 2>&1 || true
+        ssh-keygen -R serverb.lab.test -f /home/student/.ssh/known_hosts >/dev/null 2>&1 || true
+        ssh-keygen -R 192.168.100.12 -f /home/student/.ssh/known_hosts >/dev/null 2>&1 || true
+
+        ssh-keyscan -H serverb serverb.lab.test 192.168.100.12 \
+          2>/dev/null >> /home/student/.ssh/known_hosts
+      args:
+        executable: /bin/bash
+      changed_when: true
+
+    - name: Validate passwordless SSH from servera to serverb
+      become: true
+      become_user: student
+      ansible.builtin.command:
+        cmd: ssh -o BatchMode=yes student@serverb hostname -f
+      register: servera_to_serverb_ssh
+      changed_when: false
+      failed_when:
+        - servera_to_serverb_ssh.rc != 0
+        - servera_to_serverb_ssh.stdout | trim != 'serverb.lab.test'
+

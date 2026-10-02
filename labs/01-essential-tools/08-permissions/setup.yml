@@ -1,0 +1,36 @@
+---
+- name: Prepare obj01-08 permissions lab
+  hosts: servera
+  gather_facts: false
+
+  vars:
+    root: /home/student/rhcsa-lab/obj01-08
+
+  tasks:
+    - name: Remove previous exercise data
+      ansible.builtin.file:
+        path: "{{ root }}"
+        state: absent
+
+    - name: Create exercise directories
+      ansible.builtin.file:
+        path: "{{ root }}/{{ item }}"
+        state: directory
+        mode: "0777"
+      loop:
+        - data/scripts
+        - generated
+
+    - name: Create report file
+      ansible.builtin.copy:
+        dest: "{{ root }}/data/report.txt"
+        content: "quarterly report\n"
+        mode: "0666"
+
+    - name: Create backup script
+      ansible.builtin.copy:
+        dest: "{{ root }}/data/scripts/backup.sh"
+        content: |
+          #!/bin/bash
+          echo backup
+        mode: "0644"

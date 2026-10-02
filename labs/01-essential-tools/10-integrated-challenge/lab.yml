@@ -1,6 +1,7 @@
 ---
 id: obj01-10
 title: "Desafio integrado Essential Tools"
+title_en: "Integrated Essential Tools challenge"
 objective: "Objective 01 — Essential Tools"
 
 target:
@@ -8,7 +9,7 @@ target:
   - serverb
 
 difficulty: 3
-duration: 20
+duration: 25
 
 compatibility:
   local: "RHEL 9.8"
@@ -16,4 +17,4 @@ compatibility:
   level: exact
 
 reset_policy: ansible
-status: catalog-only
+status: ready

@@ -10,6 +10,7 @@ from labctl.remote import json_from_remote_python
 REMOTE_CHECKER = r"""
 from pathlib import Path
 import json
+import subprocess
 
 root = Path("/home/student/rhcsa-lab/obj01-02")
 out = root / "output"
@@ -24,12 +25,23 @@ expected_combined = (
     "INFO api01 ready\n"
 )
 expected_append = "audit-check-complete\naudit-check-complete\n"
-expected_unique = "NetworkManager\nchronyd\ncockpit\nfirewalld\nsshd\n"
 expected_count = "4\n"
 
 def exact(name, expected):
     path = out / name
     return path.is_file() and path.read_text() == expected
+
+# Do not hard-code collation order. GNU sort follows the current locale,
+# therefore the grader generates the expected result on the target using
+# the same environment in which the student's pipeline runs.
+sort_proc = subprocess.run(
+    ["sort", "-u", str(root / "input/services.txt")],
+    text=True,
+    stdout=subprocess.PIPE,
+    stderr=subprocess.PIPE,
+    check=False,
+)
+expected_unique = sort_proc.stdout if sort_proc.returncode == 0 else None
 
 checks = [
     {
@@ -54,7 +66,10 @@ checks = [
     },
     {
         "label": "pipeline produziu lista ordenada sem duplicatas",
-        "pass": exact("services-unique.txt", expected_unique),
+        "pass": (
+            expected_unique is not None
+            and exact("services-unique.txt", expected_unique)
+        ),
         "hint": "Ordene a entrada e elimine repetições.",
     },
     {
@@ -77,8 +92,7 @@ def main() -> int:
     try:
         payload = json_from_remote_python("servera", REMOTE_CHECKER)
     except Exception as exc:
-        print(str(exc))
-        return 2
+        raise RuntimeError(f"obj01-02 remote checker failed: {exc}") from exc
 
     print(json.dumps(payload, ensure_ascii=False))
     return 0 if payload.get("score") == 100 else 1

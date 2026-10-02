@@ -1,13 +1,14 @@
 ---
 id: obj01-05
 title: "Arquivos e compressão"
+title_en: "Archives and compression"
 objective: "Objective 01 — Essential Tools"
 
 target:
   - servera
 
-difficulty: 1
-duration: 7
+difficulty: 2
+duration: 12
 
 compatibility:
   local: "RHEL 9.8"
@@ -15,4 +16,4 @@ compatibility:
   level: exact
 
 reset_policy: ansible
-status: catalog-only
+status: ready

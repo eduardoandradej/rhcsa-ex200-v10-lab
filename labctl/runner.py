@@ -46,18 +46,22 @@ def run_grader(path: Path) -> tuple[int, dict]:
         env=env,
     )
 
-    if proc.returncode not in (0, 1):
-        raise RuntimeError(
-            proc.stderr.strip()
-            or proc.stdout.strip()
-            or "grader terminou com erro"
-        )
-
+    # A valid grader is allowed to return 0 (PASS) or 1 (INCOMPLETE),
+    # but in both cases it must emit a JSON payload.
     try:
         payload = json.loads(proc.stdout)
     except json.JSONDecodeError as exc:
+        detail = (
+            proc.stderr.strip()
+            or proc.stdout.strip()
+            or f"grader terminou com rc={proc.returncode} sem saída JSON"
+        )
         raise RuntimeError(
-            f"grader retornou saída JSON inválida: {exc}"
+            "grader falhou antes de retornar JSON:\n" + detail
         ) from exc
+
+    if proc.returncode not in (0, 1):
+        detail = proc.stderr.strip() or f"grader terminou com rc={proc.returncode}"
+        raise RuntimeError(detail)
 
     return proc.returncode, payload

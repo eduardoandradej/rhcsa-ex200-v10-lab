@@ -1,0 +1,10 @@
+---
+- name: Finish obj01-05 archive and compression lab
+  hosts: servera
+  gather_facts: false
+
+  tasks:
+    - name: Remove exercise data
+      ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj01-05
+        state: absent

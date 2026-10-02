@@ -1,0 +1,27 @@
+---
+- name: Prepare obj01-06 text editing lab
+  hosts: servera
+  gather_facts: false
+
+  tasks:
+    - name: Remove previous exercise data
+      ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj01-06
+        state: absent
+
+    - name: Create exercise directory
+      ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj01-06
+        state: directory
+        mode: "0755"
+
+    - name: Create configuration file
+      ansible.builtin.copy:
+        dest: /home/student/rhcsa-lab/obj01-06/app.conf
+        mode: "0644"
+        content: |
+          # RHCSA training application
+          environment=development
+          workers=2
+          debug=true
+          port=8080

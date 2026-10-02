@@ -1,13 +1,14 @@
 ---
 id: obj01-09
 title: "Documentação do sistema"
+title_en: "System documentation"
 objective: "Objective 01 — Essential Tools"
 
 target:
   - servera
 
 difficulty: 2
-duration: 8
+duration: 10
 
 compatibility:
   local: "RHEL 9.8"
@@ -15,4 +16,4 @@ compatibility:
   level: exact
 
 reset_policy: ansible
-status: catalog-only
+status: ready

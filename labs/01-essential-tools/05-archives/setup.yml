@@ -1,0 +1,54 @@
+---
+- name: Prepare obj01-05 archive and compression lab
+  hosts: servera
+  gather_facts: false
+
+  vars:
+    root: /home/student/rhcsa-lab/obj01-05
+
+  tasks:
+    - name: Validate archive tools from environment baseline
+      ansible.builtin.shell: |
+        set -o pipefail
+        missing=0
+
+        for cmd in tar gzip bzip2; do
+          if ! command -v "$cmd" >/dev/null 2>&1; then
+            echo "MISSING $cmd"
+            missing=1
+          else
+            echo "OK $cmd -> $(command -v "$cmd")"
+          fi
+        done
+
+        exit "$missing"
+      args:
+        executable: /bin/bash
+      changed_when: false
+
+    - name: Remove previous exercise data
+      ansible.builtin.file:
+        path: "{{ root }}"
+        state: absent
+
+    - name: Create exercise directories
+      ansible.builtin.file:
+        path: "{{ root }}/{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - project/config
+        - project/docs
+        - output
+        - restore-gzip
+        - restore-bzip2
+
+    - name: Create project files
+      ansible.builtin.copy:
+        dest: "{{ root }}/{{ item.path }}"
+        content: "{{ item.content }}"
+        mode: "0644"
+      loop:
+        - { path: "project/config/app.conf", content: "service=rhcsa-lab\nworkers=4\n" }
+        - { path: "project/docs/readme.txt", content: "RHCSA archive practice\n" }
+        - { path: "project/inventory.txt", content: "servera\nserverb\n" }

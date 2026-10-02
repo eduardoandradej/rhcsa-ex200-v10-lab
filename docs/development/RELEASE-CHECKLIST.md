@@ -1,23 +1,33 @@
 # Release checklist
 
-Antes de publicar uma entrega:
+O projeto usa dois níveis de validação.
+
+## 1. Gate estático
 
 ```bash
 bash tests/release-gate.sh
 ```
 
-O gate valida:
+Valida sintaxe Python, metadados YAML, contrato dos labs `ready`, sintaxe Ansible e smoke test do CLI.
 
-- sintaxe dos módulos Python;
-- sintaxe de todos os graders;
-- metadados YAML do catálogo;
-- sintaxe dos playbooks `setup.yml` e `finish.yml`;
-- inicialização do CLI e descoberta do catálogo.
+## 2. Integração de referência
 
-Para laboratórios novos, ainda é obrigatório executar ao menos uma vez o ciclo real:
-
-```text
-lab start -> resolução -> lab grade -> lab finish
+```bash
+bash tests/integration-reference.sh
 ```
 
-O release só deve ser publicado depois do ciclo real atingir `PASS`.
+Esse teste:
+
+1. executa `lab start`;
+2. aplica uma solução de referência automatizada;
+3. exige `Score: 100%`;
+4. executa `lab finish`;
+5. repete o ciclo para os laboratórios selecionados.
+
+Para testar somente alguns labs:
+
+```bash
+bash tests/integration-reference.sh obj01-04 obj01-05 obj01-06 obj01-07
+```
+
+A solução de referência existe para validar a engenharia do lab. O fluxo normal do estudante continua sendo manual.

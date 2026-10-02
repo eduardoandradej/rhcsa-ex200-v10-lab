@@ -1,13 +1,14 @@
 ---
 id: obj01-08
 title: "Permissões de arquivos"
+title_en: "File permissions"
 objective: "Objective 01 — Essential Tools"
 
 target:
   - servera
 
 difficulty: 2
-duration: 8
+duration: 12
 
 compatibility:
   local: "RHEL 9.8"
@@ -15,4 +16,4 @@ compatibility:
   level: exact
 
 reset_policy: ansible
-status: catalog-only
+status: ready

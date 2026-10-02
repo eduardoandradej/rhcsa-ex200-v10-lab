@@ -1,0 +1,10 @@
+---
+- name: Finish obj01-08 permissions lab
+  hosts: servera
+  gather_facts: false
+
+  tasks:
+    - name: Remove exercise data
+      ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj01-08
+        state: absent

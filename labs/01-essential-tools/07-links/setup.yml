@@ -1,0 +1,32 @@
+---
+- name: Prepare obj01-07 links lab
+  hosts: servera
+  gather_facts: false
+
+  vars:
+    root: /home/student/rhcsa-lab/obj01-07
+
+  tasks:
+    - name: Remove previous exercise data
+      ansible.builtin.file:
+        path: "{{ root }}"
+        state: absent
+
+    - name: Create directories
+      ansible.builtin.file:
+        path: "{{ root }}/{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - data/docs
+        - links
+
+    - name: Create source files
+      ansible.builtin.copy:
+        dest: "{{ root }}/{{ item.path }}"
+        content: "{{ item.content }}"
+        mode: "0644"
+      loop:
+        - { path: "data/inventory.txt", content: "servera\nserverb\n" }
+        - { path: "data/app.conf", content: "environment=production\n" }
+        - { path: "data/docs/guide.txt", content: "RHCSA links practice\n" }

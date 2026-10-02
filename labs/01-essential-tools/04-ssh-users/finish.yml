@@ -1,0 +1,17 @@
+---
+- name: Finish obj01-04 SSH and user switching lab
+  hosts: servera
+  gather_facts: false
+
+  tasks:
+    - name: Remove exercise data
+      ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj01-04
+        state: absent
+
+    - name: Remove labuser
+      become: true
+      ansible.builtin.user:
+        name: labuser
+        state: absent
+        remove: true

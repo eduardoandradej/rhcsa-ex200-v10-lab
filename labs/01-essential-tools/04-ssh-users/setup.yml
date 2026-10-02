@@ -1,0 +1,122 @@
+---
+- name: Prepare obj01-04 SSH and user switching lab
+  hosts: servera
+  gather_facts: false
+
+  tasks:
+    - name: Remove previous exercise data
+      ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj01-04
+        state: absent
+
+    - name: Create exercise directory
+      ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj01-04
+        state: directory
+        mode: "0755"
+
+    - name: Create labuser
+      become: true
+      ansible.builtin.user:
+        name: labuser
+        shell: /bin/bash
+        create_home: true
+        state: present
+
+    - name: Set labuser laboratory password
+      become: true
+      ansible.builtin.command: chpasswd
+      args:
+        stdin: "labuser:redhat"
+      changed_when: true
+
+    - name: Remove previous labuser result
+      become: true
+      ansible.builtin.file:
+        path: /home/labuser/switch-user.txt
+        state: absent
+
+    - name: Ensure student SSH directory exists on servera
+      become: true
+      ansible.builtin.file:
+        path: /home/student/.ssh
+        state: directory
+        owner: student
+        group: student
+        mode: "0700"
+
+    - name: Generate student SSH key on servera
+      become: true
+      become_user: student
+      ansible.builtin.command:
+        cmd: ssh-keygen -q -t ed25519 -N '' -f /home/student/.ssh/id_ed25519
+        creates: /home/student/.ssh/id_ed25519
+
+    - name: Read servera student public key
+      become: true
+      ansible.builtin.slurp:
+        src: /home/student/.ssh/id_ed25519.pub
+      register: servera_student_pubkey
+
+    - name: Ensure student SSH directory exists on serverb
+      delegate_to: serverb
+      become: true
+      ansible.builtin.file:
+        path: /home/student/.ssh
+        state: directory
+        owner: student
+        group: student
+        mode: "0700"
+
+    - name: Ensure authorized_keys exists on serverb
+      delegate_to: serverb
+      become: true
+      ansible.builtin.file:
+        path: /home/student/.ssh/authorized_keys
+        state: touch
+        owner: student
+        group: student
+        mode: "0600"
+        modification_time: preserve
+        access_time: preserve
+
+    - name: Authorize servera student key on serverb
+      delegate_to: serverb
+      become: true
+      ansible.builtin.lineinfile:
+        path: /home/student/.ssh/authorized_keys
+        line: "{{ servera_student_pubkey.content | b64decode | trim }}"
+        owner: student
+        group: student
+        mode: "0600"
+        create: true
+
+    - name: Refresh serverb host keys in servera known_hosts
+      become: true
+      become_user: student
+      ansible.builtin.shell: |
+        set -e
+        touch /home/student/.ssh/known_hosts
+        chmod 0600 /home/student/.ssh/known_hosts
+
+        ssh-keygen -R serverb -f /home/student/.ssh/known_hosts >/dev/null 2>&1 || true
+        ssh-keygen -R serverb.lab.test -f /home/student/.ssh/known_hosts >/dev/null 2>&1 || true
+        ssh-keygen -R 192.168.100.12 -f /home/student/.ssh/known_hosts >/dev/null 2>&1 || true
+
+        ssh-keyscan -H serverb serverb.lab.test 192.168.100.12 \
+          2>/dev/null >> /home/student/.ssh/known_hosts
+      args:
+        executable: /bin/bash
+      changed_when: true
+
+    - name: Validate passwordless SSH from servera to serverb
+      become: true
+      become_user: student
+      ansible.builtin.command:
+        cmd: ssh -o BatchMode=yes student@serverb hostname -f
+      register: servera_to_serverb_ssh
+      changed_when: false
+      failed_when:
+        - servera_to_serverb_ssh.rc != 0
+        - servera_to_serverb_ssh.stdout | trim != 'serverb.lab.test'
+

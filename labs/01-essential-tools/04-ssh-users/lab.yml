@@ -1,6 +1,7 @@
 ---
 id: obj01-04
 title: "SSH e troca de usuários"
+title_en: "SSH and user switching"
 objective: "Objective 01 — Essential Tools"
 
 target:
@@ -8,7 +9,7 @@ target:
   - serverb
 
 difficulty: 2
-duration: 8
+duration: 12
 
 compatibility:
   local: "RHEL 9.8"
@@ -16,4 +17,4 @@ compatibility:
   level: exact
 
 reset_policy: ansible
-status: catalog-only
+status: ready

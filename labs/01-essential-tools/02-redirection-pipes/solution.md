@@ -9,8 +9,8 @@ bin/stream-demo > output/combined.log 2>&1
 bin/append-demo >> output/append.log
 bin/append-demo >> output/append.log
 
-cat input/services.txt | sort | uniq > output/services-unique.txt
-grep 'active' input/status.txt | wc -l > output/active-count.txt
+sort input/services.txt | uniq > output/services-unique.txt
+grep -w 'active' input/status.txt | wc -l > output/active-count.txt
 ```
 
 Outras soluções que produzam o mesmo estado final são válidas.

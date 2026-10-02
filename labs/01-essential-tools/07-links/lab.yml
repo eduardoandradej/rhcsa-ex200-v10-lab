@@ -1,13 +1,14 @@
 ---
 id: obj01-07
 title: "Hard links e symbolic links"
+title_en: "Hard and symbolic links"
 objective: "Objective 01 — Essential Tools"
 
 target:
   - servera
 
-difficulty: 1
-duration: 6
+difficulty: 2
+duration: 10
 
 compatibility:
   local: "RHEL 9.8"
@@ -15,4 +16,4 @@ compatibility:
   level: exact
 
 reset_policy: ansible
-status: catalog-only
+status: ready

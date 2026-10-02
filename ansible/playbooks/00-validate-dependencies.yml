@@ -1,0 +1,51 @@
+---
+- name: Validate control plane baseline
+  hosts: control
+  gather_facts: false
+
+  vars_files:
+    - ../vars/lab_dependencies.yml
+
+  tasks:
+    - name: Validate required control-plane commands
+      ansible.builtin.shell: |
+        set -o pipefail
+        failed=0
+        {% for cmd in control_plane_required_commands %}
+        if ! command -v {{ cmd }} >/dev/null 2>&1; then
+          echo "MISSING {{ cmd }}"
+          failed=1
+        else
+          echo "OK {{ cmd }}"
+        fi
+        {% endfor %}
+        exit "$failed"
+      args:
+        executable: /bin/bash
+      changed_when: false
+
+- name: Validate managed-node baseline
+  hosts: managed
+  gather_facts: false
+  become: true
+
+  vars_files:
+    - ../vars/lab_dependencies.yml
+
+  tasks:
+    - name: Validate required managed-node commands
+      ansible.builtin.shell: |
+        set -o pipefail
+        failed=0
+        {% for cmd in managed_required_commands %}
+        if ! command -v {{ cmd }} >/dev/null 2>&1; then
+          echo "MISSING {{ cmd }}"
+          failed=1
+        else
+          echo "OK {{ cmd }}"
+        fi
+        {% endfor %}
+        exit "$failed"
+      args:
+        executable: /bin/bash
+      changed_when: false
