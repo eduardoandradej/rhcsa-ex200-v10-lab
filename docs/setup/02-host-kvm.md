@@ -4,22 +4,23 @@
 
 **Onde executar:** terminal do host KVM, com `sudo`.
 
-## Caminho principal — Ubuntu 24.04 LTS
+## Caminho principal — Ubuntu Desktop 24.04 LTS
 
-Instale no hospedeiro Ubuntu:
+Parta de um Ubuntu Desktop instalado. Instale no hospedeiro:
 
 ```bash
 sudo apt update
 sudo apt install -y qemu-kvm libvirt-daemon-system libvirt-clients \
-  virtinst virt-manager virt-viewer cpu-checker libosinfo-bin
+  virtinst virt-manager virt-viewer cpu-checker libosinfo-bin cockpit cockpit-machines
 sudo systemctl enable --now libvirtd
+sudo systemctl enable --now cockpit.socket
 sudo usermod -aG kvm,libvirt "$USER"
 kvm-ok
 sudo virt-host-validate qemu
 sudo virsh -c qemu:///system list --all
 ```
 
-Encerre a sessão e entre novamente para atualizar os grupos. A instalação de virt-manager permite gerenciamento gráfico em uma estação com GUI; não instala um desktop completo em um Ubuntu Server. O restante do guia pode usar `sudo virsh` independentemente da atualização dos grupos.
+Encerre a sessão e entre novamente para atualizar os grupos. O virt-manager e o navegador são usados diretamente na sessão Desktop do hospedeiro. O restante do guia pode usar `sudo virsh` independentemente da atualização dos grupos.
 
 Referência oficial: [libvirt no Ubuntu](https://ubuntu.com/server/docs/how-to/virtualisation/libvirt/).
 
@@ -32,13 +33,41 @@ Os comandos seguintes são a alternativa para host Rocky/RHEL; não execute `dnf
 ```bash
 lscpu
 ls -l /dev/kvm
-sudo dnf install -y qemu-kvm libvirt virt-install virt-viewer
+sudo dnf install -y qemu-kvm libvirt virt-install virt-manager virt-viewer cockpit cockpit-machines
 sudo systemctl enable --now libvirtd
+sudo systemctl enable --now cockpit.socket
 sudo virt-host-validate qemu
 sudo virsh -c qemu:///system list --all
 ```
 
 Se `/dev/kvm` não existir, confira o firmware e os módulos `kvm_intel`/`kvm_amd`. Em host que usa daemons modulares de libvirt, habilite os sockets correspondentes à instalação em vez de assumir `libvirtd`. Resolva falhas de KVM e permissões antes de criar as VMs; avisos de IOMMU não impedem este roteiro, que não usa passthrough.
+
+## Cockpit — consultas rápidas no hospedeiro
+
+O Cockpit e `cockpit-machines` fazem parte da preparação do **host** nos dois caminhos acima. Não é necessário instalá-los nas três VMs para consultar o hospedeiro e suas máquinas virtuais.
+
+Confira o serviço:
+
+```bash
+systemctl is-active cockpit.socket
+systemctl status cockpit.socket --no-pager
+```
+
+No navegador do próprio Desktop, abra **[https://localhost:9090](https://localhost:9090)**. Entre com o usuário e a senha do hospedeiro (por exemplo, `eduardo`), não com a conta `student` do bastion. Uma instalação com certificado local pode mostrar um aviso no navegador; confira que o endereço é o seu host antes de continuar.
+
+Use o painel para consultar CPU e memória, serviços, logs, interfaces e a seção **Máquinas virtuais**. Algumas páginas dependem dos módulos instalados e da configuração do sistema. Para ações administrativas, use a elevação de privilégios oferecida pela interface.
+
+O acesso local basta para este roteiro. Não é necessário abrir a porta 9090 no firewall para acessar pelo navegador do próprio host.
+
+Referências: [instalação oficial do Cockpit](https://cockpit-project.org/running.html) e [módulo de máquinas virtuais](https://cockpit-project.org/guide/latest/feature-virtualmachines.html).
+
+No Ubuntu LTS, o projeto Cockpit também recomenda versões dos backports oficiais. Para optar por esse canal, com `noble-backports` habilitado, instale os dois pacotes do mesmo canal:
+
+```bash
+sudo apt install -t noble-backports cockpit cockpit-machines
+```
+
+Esse comando é uma opção de atualização; a instalação inicial acima usa os repositórios Ubuntu habilitados. Confirme os pacotes disponíveis antes de alterar o canal.
 
 ## Etapas comuns aos dois hospedeiros
 

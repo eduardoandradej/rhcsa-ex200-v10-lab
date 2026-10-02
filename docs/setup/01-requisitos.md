@@ -8,19 +8,18 @@ Este roteiro começa com um host Linux e termina com o primeiro exercício execu
 
 A base atual do projeto usa **RHEL 9.8 nas três VMs** e toma **RHEL 10 como referência de estudo**. O playbook `validate.yml` atual exige Red Hat Enterprise Linux 9. Usar RHEL 10 requer revisar essa validação e a compatibilidade dos exercícios; não basta trocar a ISO.
 
-O hospedeiro usado neste projeto é **Ubuntu**, com KVM/libvirt. A instalação real foi confirmada como **Ubuntu 24.04.5 LTS (Noble Numbat)**. O guia apresenta Ubuntu como caminho principal e **Rocky Linux 9.8 como alternativa de hospedeiro**. A distribuição do host não precisa ser igual à das VMs.
+O hospedeiro usado neste projeto é **Ubuntu**, com KVM/libvirt. A instalação real foi confirmada como **Ubuntu Desktop 24.04.5 LTS (Noble Numbat)**. O guia apresenta Ubuntu como caminho principal e **Rocky Linux 9.8 como alternativa de hospedeiro**. A distribuição do host não precisa ser igual à das VMs.
 
 ## Imagens e downloads oficiais
 
 | Uso | Distribuição / imagem | Link oficial |
 |---|---|---|
-| Host Ubuntu | Ubuntu 24.04 LTS, ISO AMD64 Desktop ou Server | [Imagens da série 24.04](https://releases.ubuntu.com/24.04/) |
-| Host alternativo | Rocky Linux 9.8 x86_64, Minimal ou DVD | [Diretório oficial de ISOs 9.8](https://download.rockylinux.org/pub/rocky/9.8/isos/x86_64/) |
-| Host alternativo, instalação mínima | Rocky Linux 9.8 Minimal x86_64 | [Baixar ISO Minimal](https://download.rockylinux.org/pub/rocky/9.8/isos/x86_64/Rocky-9.8-x86_64-minimal.iso) |
+| Host Ubuntu | Ubuntu Desktop 24.04 LTS, ISO AMD64 | [Imagens da série 24.04](https://releases.ubuntu.com/24.04/) |
+| Host alternativo | Rocky Linux 9.8 x86_64, DVD com ambiente gráfico | [Diretório oficial de ISOs 9.8](https://download.rockylinux.org/pub/rocky/9.8/isos/x86_64/) |
 | Host alternativo, mídia completa | Rocky Linux 9.8 DVD x86_64 | [Baixar ISO DVD](https://download.rockylinux.org/pub/rocky/9.8/isos/x86_64/Rocky-9.8-x86_64-dvd.iso) |
 | VMs da base atual | RHEL 9.8, Binary DVD x86_64 | [Red Hat Developer](https://developers.redhat.com/products/rhel/download) · [Portal de downloads RHEL](https://access.redhat.com/downloads/content/rhel) |
 
-No Ubuntu Desktop há interface gráfica para virt-manager; Ubuntu Server não a inclui. Escolha conforme a forma de gerenciamento do host. Use a ISO da série 24.04 disponível na página oficial, sem confundir a atualização da mídia com a versão exata do host original.
+O padrão deste laboratório é **hospedeiro Desktop, com interface gráfica**. Use Ubuntu Desktop; na alternativa Rocky Linux, instale pela mídia DVD e selecione um ambiente com interface gráfica no instalador. Isso permite usar navegador, virt-manager e consoles localmente. Esse padrão é do hospedeiro; as VMs RHEL continuam com instalação mínima conforme a etapa 3. Use a ISO da série 24.04 disponível na página oficial, sem confundir a atualização da mídia com a versão exata do host original.
 
 O download RHEL depende do acesso autorizado à conta Red Hat. No portal, selecione RHEL 9.8 e a mídia **Binary DVD x86_64** para reproduzir a base. Links diretos autenticados/temporários da ISO não são publicados no projeto. A ISO Boot depende de uma fonte de pacotes durante a instalação; ela não substitui a DVD no procedimento de repositório local.
 
@@ -37,7 +36,7 @@ Confira checksums nas páginas oficiais: [SHA256SUMS do Ubuntu](https://releases
 | Item | Registro disponível |
 |---|---|
 | Equipamento | ThinkPad T430 (identificação informada no terminal do autor) |
-| Sistema | Ubuntu 24.04.5 LTS (Noble Numbat), x86_64 |
+| Sistema | Ubuntu Desktop 24.04.5 LTS (Noble Numbat), x86_64 |
 | Virtualização | KVM/QEMU gerenciado por libvirt |
 | Processador | Intel Core i5-3320M, frequência nominal 2,60 GHz; máxima reportada 3,30 GHz |
 | Topologia de CPU | 1 socket, 2 núcleos físicos, 2 threads por núcleo: 4 CPUs lógicas |
