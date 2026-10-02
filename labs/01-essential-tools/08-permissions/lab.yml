@@ -1,0 +1,18 @@
+---
+id: obj01-08
+title: "Permissões de arquivos"
+objective: "Objective 01 — Essential Tools"
+
+target:
+  - servera
+
+difficulty: 2
+duration: 8
+
+compatibility:
+  local: "RHEL 9.8"
+  target: "RHEL 10"
+  level: exact
+
+reset_policy: ansible
+status: catalog-only

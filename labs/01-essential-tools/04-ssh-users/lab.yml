@@ -1,0 +1,19 @@
+---
+id: obj01-04
+title: "SSH e troca de usuários"
+objective: "Objective 01 — Essential Tools"
+
+target:
+  - servera
+  - serverb
+
+difficulty: 2
+duration: 8
+
+compatibility:
+  local: "RHEL 9.8"
+  target: "RHEL 10"
+  level: exact
+
+reset_policy: ansible
+status: catalog-only
