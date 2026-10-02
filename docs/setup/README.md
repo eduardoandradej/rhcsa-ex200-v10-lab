@@ -1,31 +1,16 @@
-# Setup atual
+# Instalação do laboratório — comece por aqui
 
-## Pré-requisitos no bastion
+[Home](../../README.md)
 
-```bash
-git --version
-ansible --version
-python3 --version
-```
+Siga a sequência quando estiver montando o ambiente do zero. Se as VMs já estão prontas, confira a etapa 4 e avance para a preparação do bastion.
 
-## Repositórios locais
+1. [Requisitos e arquitetura](01-requisitos.md)
+2. [Preparação do host KVM/libvirt](02-host-kvm.md)
+3. [Criação das máquinas virtuais](03-criacao-vms.md)
+4. [Configuração inicial das VMs](04-configuracao-vms.md)
+5. [Preparação do bastion e clonagem](05-bastion-git.md)
+6. [Configuração e validação do Ansible](06-validacao-ansible.md)
+7. [Baseline e snapshots](07-baseline.md)
+8. [Primeiro exercício](08-primeiro-lab.md)
 
-```bash
-sudo dnf repolist
-```
-
-## SSH
-
-```bash
-ssh servera hostname -f
-ssh serverb hostname -f
-```
-
-## Ansible
-
-```bash
-cd ~/rhcsa-ex200-v10-lab/ansible
-ansible-inventory --graph
-ansible managed -m ansible.builtin.ping
-ansible-playbook playbooks/validate.yml
-```
+Cada guia informa o local de execução, os comandos e o critério para avançar. O host KVM cria as VMs; o bastion usa Git, Ansible e o comando `lab`.

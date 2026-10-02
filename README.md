@@ -2,6 +2,23 @@
 
 Laboratório comunitário e **não oficial** para prática hands-on de administração Red Hat Enterprise Linux, orientado aos objetivos atuais do RHCSA / EX200.
 
+## Comece por aqui
+
+Monte o ambiente antes de executar a automação. Siga os guias na ordem:
+
+1. [Requisitos e arquitetura](docs/setup/01-requisitos.md)
+2. [Preparação do host KVM/libvirt](docs/setup/02-host-kvm.md)
+3. [Criação das máquinas virtuais](docs/setup/03-criacao-vms.md)
+4. [Configuração inicial das VMs](docs/setup/04-configuracao-vms.md)
+5. [Preparação do bastion e clonagem](docs/setup/05-bastion-git.md)
+6. [Configuração e validação do Ansible](docs/setup/06-validacao-ansible.md)
+7. [Baseline e snapshots](docs/setup/07-baseline.md)
+8. [Primeiro exercício](docs/setup/08-primeiro-lab.md)
+
+**Já tem as VMs prontas?** Confira a [configuração inicial](docs/setup/04-configuracao-vms.md) e siga para o [bastion e Git](docs/setup/05-bastion-git.md).
+
+O roteiro de instalação e o roadmap de desenvolvimento têm funções diferentes: os guias explicam como montar o ambiente; o roadmap mostra as funcionalidades implementadas e pendentes.
+
 ## Visão geral
 
 Este projeto usa:
@@ -13,7 +30,7 @@ Este projeto usa:
 - **servera** como alvo principal de prática;
 - **serverb** como servidor auxiliar;
 - **Ansible** para preparar, limpar e validar cenários;
-- **Python** para o futuro CLI `lab` e graders;
+- **Python** para o CLI `lab` e graders;
 - **Git/GitHub** para versionamento e documentação.
 
 > A automação prepara e avalia o ambiente. O estudante resolve manualmente as tarefas de administração.
@@ -42,14 +59,8 @@ Este projeto usa:
 
 ## Primeiro teste do Control Plane
 
-No `bastion`:
-
-```bash
-cd ~/rhcsa-ex200-v10-lab/ansible
-ansible-inventory --graph
-ansible managed -m ansible.builtin.ping
-ansible managed -m ansible.builtin.command -a "hostname -f"
-```
+Execute somente depois de concluir a [preparação do bastion](docs/setup/05-bastion-git.md).
+O teste completo está no [guia de validação do Ansible](docs/setup/06-validacao-ansible.md).
 
 ## Roadmap
 
@@ -60,13 +71,14 @@ ansible managed -m ansible.builtin.command -a "hostname -f"
 - [x] Git + Ansible no bastion
 - [x] SSH sem senha bastion -> servera/serverb
 - [x] inventory Ansible funcional
-- [ ] `lab list`
-- [ ] `lab start`
-- [ ] `lab grade`
-- [ ] `lab finish`
+- [x] `lab list`
+- [x] `lab start`
+- [x] `lab grade`
+- [x] `lab finish`
 - [ ] reset seguro via host-control
 - [ ] serviços auxiliares no bastion
-- [ ] labs por objetivo
+- [x] primeiros labs do Objetivo 01 (consulte `lab list` para saber quais estão `ready`)
+- [ ] expansão dos labs por objetivo
 - [ ] mock exams
 
 ## Compatibilidade
