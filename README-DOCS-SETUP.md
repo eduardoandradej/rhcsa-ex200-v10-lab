@@ -5,9 +5,13 @@ Ele substitui a home (`README.md`) e o índice de instalação (`docs/setup/READ
 
 A documentação foi preparada a partir do repositório público no commit `b9e846a` e da estrutura das entregas disponíveis até 2E. Ela documenta as etapas que faltavam na home; não transforma funcionalidades pendentes (reset integrado e novos cenários) em funcionalidades concluídas.
 
+## Revisão v3
+
+Adiciona links oficiais de imagens/checksums, caminho principal Ubuntu e alternativa Rocky Linux 9.8. Corrige a referência de hospedeiro do pacote anterior. Registra a coleta real do hospedeiro: ThinkPad T430, Ubuntu 24.04.5 LTS, i5-3320M (2 núcleos/4 threads), 15 GiB de RAM reportados, swap 4 GiB e SSD Kingston de 240 GB. Mantém o dimensionamento sugerido das VMs separado dos recursos físicos confirmados. A alternativa Rocky para as VMs exige adaptação e não é declarada validada.
+
 ## Aplicar no bastion
 
-Transfira o arquivo `rhcsa-ex200-v10-lab-docs-kvm.tar.gz` para a pasta Downloads do usuário student no bastion. Ajuste o caminho se o download foi salvo em outro local. Não execute como root.
+Transfira o arquivo `rhcsa-ex200-v10-lab-docs-kvm-v3.tar.gz` para a pasta Downloads do usuário student no bastion. Ajuste o caminho se o download foi salvo em outro local. Não execute como root.
 
 Antes, preserve alterações locais, inclusive as de uma entrega incremental ainda não enviada. A importação abaixo exige uma árvore de trabalho limpa para que você possa comparar e desfazer pelo Git. Commitar alterações locais não exige enviá-las imediatamente ao GitHub.
 
@@ -24,7 +28,7 @@ Depois que não houver alterações pendentes, execute este bloco. Ele cria uma 
   cd ~/rhcsa-ex200-v10-lab
   test -z "$(git status --porcelain)"
   git switch -c docs/setup-kvm
-  tar --no-same-owner -xzf "$HOME/Downloads/rhcsa-ex200-v10-lab-docs-kvm.tar.gz" -C .
+  tar --no-same-owner -xzf "$HOME/Downloads/rhcsa-ex200-v10-lab-docs-kvm-v3.tar.gz" -C .
   git diff --check
   git diff -- README.md docs/setup/README.md
   git status --short

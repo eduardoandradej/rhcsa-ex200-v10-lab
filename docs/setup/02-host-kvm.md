@@ -4,7 +4,30 @@
 
 **Onde executar:** terminal do host KVM, com `sudo`.
 
-## Validar virtualização e instalar ferramentas
+## Caminho principal — Ubuntu 24.04 LTS
+
+Instale no hospedeiro Ubuntu:
+
+```bash
+sudo apt update
+sudo apt install -y qemu-kvm libvirt-daemon-system libvirt-clients \
+  virtinst virt-manager virt-viewer cpu-checker libosinfo-bin
+sudo systemctl enable --now libvirtd
+sudo usermod -aG kvm,libvirt "$USER"
+kvm-ok
+sudo virt-host-validate qemu
+sudo virsh -c qemu:///system list --all
+```
+
+Encerre a sessão e entre novamente para atualizar os grupos. A instalação de virt-manager permite gerenciamento gráfico em uma estação com GUI; não instala um desktop completo em um Ubuntu Server. O restante do guia pode usar `sudo virsh` independentemente da atualização dos grupos.
+
+Referência oficial: [libvirt no Ubuntu](https://ubuntu.com/server/docs/how-to/virtualisation/libvirt/).
+
+## Caminho alternativo — Rocky Linux 9.8 / RHEL 9
+
+Os comandos seguintes são a alternativa para host Rocky/RHEL; não execute `dnf` no Ubuntu.
+
+### Validar virtualização e instalar ferramentas
 
 ```bash
 lscpu
@@ -16,6 +39,15 @@ sudo virsh -c qemu:///system list --all
 ```
 
 Se `/dev/kvm` não existir, confira o firmware e os módulos `kvm_intel`/`kvm_amd`. Em host que usa daemons modulares de libvirt, habilite os sockets correspondentes à instalação em vez de assumir `libvirtd`. Resolva falhas de KVM e permissões antes de criar as VMs; avisos de IOMMU não impedem este roteiro, que não usa passthrough.
+
+## Etapas comuns aos dois hospedeiros
+
+Antes de criar rede ou pool, inspecione o ambiente existente. O histórico do script original usa a rede `rhel-lab`, bridge `virbr100` e ISOs em `/var/lib/libvirt/iso`. Os nomes `rhcsa-lab` e `virbr-rhcsa` abaixo são os nomes do roteiro público de instalação nova. Ambos podem representar a mesma arquitetura, mas não crie duas redes com a mesma faixa. Se sua rede `rhel-lab` já existir, confira seu XML e use esse nome nos comandos `--network` da etapa 3. O caminho da ISO também pode ser adaptado à instalação existente.
+
+```bash
+sudo virsh -c qemu:///system net-list --all
+sudo virsh -c qemu:///system pool-list --all
+```
 
 ## Armazenamento
 
@@ -32,7 +64,7 @@ sudo virsh -c qemu:///system pool-start default
 sudo virsh -c qemu:///system pool-autostart default
 ```
 
-Se já existir e estiver inativo, apenas inicie-o. Não redefina um pool existente. Este guia usa discos qcow2 nesse pool. Mantenha SELinux habilitado e use os diretórios padrão de libvirt.
+Se já existir e estiver inativo, apenas inicie-o. Não redefina um pool existente. Este guia usa discos qcow2 nesse pool. Use os diretórios padrão de libvirt. No Rocky/RHEL, mantenha SELinux habilitado; no Ubuntu, preserve as proteções AppArmor de libvirt. Não é necessário desabilitar esses mecanismos para seguir o roteiro.
 
 ## Rede NAT
 

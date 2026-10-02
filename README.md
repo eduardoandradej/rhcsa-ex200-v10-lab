@@ -19,6 +19,12 @@ Monte o ambiente antes de executar a automação. Siga os guias na ordem:
 
 O roteiro de instalação e o roadmap de desenvolvimento têm funções diferentes: os guias explicam como montar o ambiente; o roadmap mostra as funcionalidades implementadas e pendentes.
 
+## Hospedeiro e imagens
+
+O laboratório foi montado em um hospedeiro **Ubuntu com KVM/libvirt**. O guia usa Ubuntu como caminho principal e documenta **Rocky Linux 9.8 como alternativa de host**. As VMs da base atual são RHEL 9.8.
+
+Veja [downloads oficiais e configuração do ambiente](docs/setup/01-requisitos.md#imagens-e-downloads-oficiais) e [preparação do host Ubuntu ou Rocky](docs/setup/02-host-kvm.md). O hospedeiro de referência é um **ThinkPad T430**, com **Ubuntu 24.04.5 LTS**, **Intel Core i5-3320M (2 núcleos / 4 threads)**, **15 GiB de RAM reportados**, **4 GiB de swap** e **SSD Kingston de 240 GB**. Veja a [configuração real do hospedeiro](docs/setup/01-requisitos.md#configuração-real-do-hospedeiro). O dimensionamento das VMs no guia é uma sugestão de instalação, não uma medição das VMs existentes.
+
 ## Visão geral
 
 Este projeto usa:
