@@ -1,0 +1,34 @@
+---
+- name: Finish obj02-08 integrated users and groups challenge
+  hosts: serverb
+  gather_facts: false
+  become: true
+  vars:
+    backup: /var/tmp/rhcsa-obj02-08-login.defs
+  tasks:
+    - name: Restore login.defs
+      ansible.builtin.copy:
+        src: "{{ backup }}"
+        dest: /etc/login.defs
+        remote_src: true
+        mode: preserve
+      when: backup is defined
+      failed_when: false
+    - name: Remove backup
+      ansible.builtin.file:
+        path: "{{ backup }}"
+        state: absent
+    - name: Remove sudoers fragment
+      ansible.builtin.file:
+        path: /etc/sudoers.d/consultantsx
+        state: absent
+    - name: Remove exercise users
+      ansible.builtin.user:
+        name: "{{ item }}"
+        state: absent
+        remove: true
+      loop: [consultx1, consultx2, consultx3]
+    - name: Remove exercise group
+      ansible.builtin.group:
+        name: consultantsx
+        state: absent

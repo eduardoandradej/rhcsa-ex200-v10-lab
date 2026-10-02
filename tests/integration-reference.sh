@@ -8,6 +8,10 @@ if [[ "$#" -eq 0 ]]; then
     LABS=(
         obj01-01 obj01-02 obj01-03 obj01-04 obj01-05
         obj01-06 obj01-07 obj01-08 obj01-09 obj01-10
+        obj02-01 obj02-02 obj02-03 obj02-04
+        obj02-05 obj02-06 obj02-07 obj02-08
+        obj03-01 obj03-02 obj03-03 obj03-04
+        obj03-05 obj03-06 obj03-07 obj03-08
     )
 else
     LABS=("$@")
@@ -21,9 +25,7 @@ cleanup_active() {
 trap cleanup_active EXIT
 
 fail_step() {
-    local id="$1"
-    local step="$2"
-    local rc="$3"
+    local id="$1" step="$2" rc="$3"
     echo "REFERENCE TEST: FAIL ($id)"
     echo "Etapa que falhou: $step (rc=$rc)"
     exit "$rc"
@@ -31,10 +33,9 @@ fail_step() {
 
 for id in "${LABS[@]}"; do
     solver="$ROOT/tests/reference-solutions/${id}.sh"
-
     [[ -x "$solver" ]] || {
         echo "REFERENCE TEST: FAIL ($id)"
-        echo "Etapa que falhou: reference solver ausente"
+        echo "Reference solver ausente"
         exit 2
     }
 
@@ -44,49 +45,42 @@ for id in "${LABS[@]}"; do
 
     echo "[1/4] lab start"
     set +e
-    start_output="$("$ROOT/bin/lab" start "$id" 2>&1)"
-    start_rc=$?
+    out="$("$ROOT/bin/lab" start "$id" 2>&1)"; rc=$?
     set -e
-    if [[ "$start_rc" -ne 0 ]]; then
-        printf '%s\n' "$start_output"
-        fail_step "$id" "lab start" "$start_rc"
-    fi
+    [[ "$rc" -eq 0 ]] || {
+        printf '%s\n' "$out"
+        fail_step "$id" "lab start" "$rc"
+    }
     echo "OK: lab start"
 
     echo "[2/4] reference solution"
     set +e
-    solver_output="$("$solver" 2>&1)"
-    solver_rc=$?
+    out="$("$solver" 2>&1)"; rc=$?
     set -e
-    if [[ "$solver_rc" -ne 0 ]]; then
-        printf '%s\n' "$solver_output"
-        fail_step "$id" "reference solution" "$solver_rc"
-    fi
-    [[ -n "$solver_output" ]] && printf '%s\n' "$solver_output"
+    [[ "$rc" -eq 0 ]] || {
+        printf '%s\n' "$out"
+        fail_step "$id" "reference solution" "$rc"
+    }
+    [[ -n "$out" ]] && printf '%s\n' "$out"
     echo "OK: reference solution"
 
     echo "[3/4] lab grade"
     set +e
-    grade_output="$("$ROOT/bin/lab" grade "$id" 2>&1)"
-    grade_rc=$?
+    out="$("$ROOT/bin/lab" grade "$id" 2>&1)"; rc=$?
     set -e
-
-    printf '%s\n' "$grade_output"
-
-    if [[ "$grade_rc" -ne 0 ]] || ! grep -q 'Score: 100%' <<<"$grade_output"; then
-        fail_step "$id" "lab grade" "$grade_rc"
+    printf '%s\n' "$out"
+    if [[ "$rc" -ne 0 ]] || ! grep -q 'Score: 100%' <<<"$out"; then
+        fail_step "$id" "lab grade" "$rc"
     fi
 
     echo "[4/4] lab finish"
     set +e
-    finish_output="$("$ROOT/bin/lab" finish "$id" 2>&1)"
-    finish_rc=$?
+    out="$("$ROOT/bin/lab" finish "$id" 2>&1)"; rc=$?
     set -e
-    if [[ "$finish_rc" -ne 0 ]]; then
-        printf '%s\n' "$finish_output"
-        fail_step "$id" "lab finish" "$finish_rc"
-    fi
-
+    [[ "$rc" -eq 0 ]] || {
+        printf '%s\n' "$out"
+        fail_step "$id" "lab finish" "$rc"
+    }
     echo "REFERENCE TEST: PASS ($id)"
 done
 

@@ -1,0 +1,15 @@
+---
+- name: Finish obj03-04 DNF install/remove lab
+  hosts: servera
+  gather_facts: false
+  become: true
+  tasks:
+    - ansible.builtin.command: "rpm -e {{ item }}"
+      loop:
+        - rhcsa-toolkit
+        - rhcsa-temp
+      changed_when: false
+      failed_when: false
+    - ansible.builtin.file:
+        path: /etc/yum.repos.d/rhcsa-base.repo
+        state: absent

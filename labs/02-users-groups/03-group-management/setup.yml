@@ -1,0 +1,10 @@
+---
+- name: Prepare obj02-03 group management lab
+  hosts: servera
+  gather_facts: false
+  become: true
+  tasks:
+    - ansible.builtin.group:
+        name: "{{ item }}"
+        state: absent
+      loop: [linuxops, auditteam, devtemp, devopsgrp, oldgrp]

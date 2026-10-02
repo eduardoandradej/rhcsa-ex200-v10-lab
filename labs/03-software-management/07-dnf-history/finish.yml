@@ -1,0 +1,15 @@
+---
+- name: Finish obj03-07 DNF history lab
+  hosts: servera
+  gather_facts: false
+  become: true
+  tasks:
+    - ansible.builtin.command: rpm -e rhcsa-history
+      changed_when: false
+      failed_when: false
+    - ansible.builtin.file:
+        path: /etc/yum.repos.d/rhcsa-history.repo
+        state: absent
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj03-07
+        state: absent

@@ -31,8 +31,43 @@ for path in sorted(Path("labs").glob("*/*/lab.yml")):
     print(f"OK {data['id']}: {status}")
 PY
 
+echo "== Grader CLI contract =="
+python3 - <<'PY'
+from pathlib import Path
+import ast
+
+failures = []
+
+for path in sorted(Path("labs").glob("*/*/grade.py")):
+    tree = ast.parse(path.read_text(), filename=str(path))
+    has_json_option = False
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+            if node.func.attr == "add_argument":
+                for arg in node.args:
+                    if isinstance(arg, ast.Constant) and arg.value == "--json":
+                        has_json_option = True
+                        break
+        if has_json_option:
+            break
+
+    if not has_json_option:
+        failures.append(str(path))
+    else:
+        print(f"OK {path.parent.name}/grade.py: --json")
+
+if failures:
+    raise SystemExit(
+        "Graders sem suporte ao contrato --json:\n  " + "\n  ".join(failures)
+    )
+PY
+
 echo "== Ansible syntax =="
 cd "$ROOT/ansible"
+ansible-playbook --syntax-check prepare-objective03.yml >/dev/null
+echo "OK ansible/prepare-objective03.yml"
+
 while IFS= read -r playbook; do
     ansible-playbook --syntax-check "$playbook" >/dev/null
     echo "OK $(basename "$(dirname "$playbook")")/$(basename "$playbook")"

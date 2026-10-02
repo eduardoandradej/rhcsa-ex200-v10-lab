@@ -1,0 +1,28 @@
+---
+- name: Prepare obj02-06 sudo lab
+  hosts: servera
+  gather_facts: false
+  become: true
+  tasks:
+    - ansible.builtin.file:
+        path: /etc/sudoers.d/opsadmin
+        state: absent
+    - ansible.builtin.user:
+        name: svcadmin
+        state: absent
+        remove: true
+    - ansible.builtin.group:
+        name: opsadmin
+        state: absent
+    - ansible.builtin.group:
+        name: opsadmin
+        gid: 33200
+        state: present
+    - ansible.builtin.user:
+        name: svcadmin
+        shell: /bin/bash
+        state: present
+    - ansible.builtin.command: chpasswd
+      args:
+        stdin: "svcadmin:redhat"
+      changed_when: true

@@ -1,0 +1,18 @@
+---
+- name: Finish obj03-08 integrated software-management challenge
+  hosts: serverb
+  gather_facts: false
+  become: true
+  tasks:
+    - ansible.builtin.command: "rpm -e {{ item }}"
+      loop:
+        - rhcsa-system
+        - rhcsa-local
+      changed_when: false
+      failed_when: false
+    - ansible.builtin.file:
+        path: /etc/yum.repos.d/rhcsa-system.repo
+        state: absent
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj03-08
+        state: absent

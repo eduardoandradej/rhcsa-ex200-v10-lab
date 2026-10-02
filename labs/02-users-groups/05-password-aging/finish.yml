@@ -1,0 +1,11 @@
+---
+- name: Finish obj02-05 password aging lab
+  hosts: servera
+  gather_facts: false
+  become: true
+  tasks:
+    - ansible.builtin.user:
+        name: "{{ item }}"
+        state: absent
+        remove: true
+      loop: [aginguser1, aginguser2]

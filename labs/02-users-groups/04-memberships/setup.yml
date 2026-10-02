@@ -1,0 +1,28 @@
+---
+- name: Prepare obj02-04 membership lab
+  hosts: servera
+  gather_facts: false
+  become: true
+  tasks:
+    - ansible.builtin.user:
+        name: "{{ item }}"
+        state: absent
+        remove: true
+      loop: [teamuser1, teamuser2]
+    - ansible.builtin.group:
+        name: "{{ item }}"
+        state: absent
+      loop: [projecta, projectb]
+    - ansible.builtin.group:
+        name: projecta
+        gid: 33100
+        state: present
+    - ansible.builtin.group:
+        name: projectb
+        gid: 33101
+        state: present
+    - ansible.builtin.user:
+        name: "{{ item }}"
+        shell: /bin/bash
+        state: present
+      loop: [teamuser1, teamuser2]

@@ -1,0 +1,45 @@
+---
+- name: Prepare obj03-08 integrated software-management challenge
+  hosts: serverb
+  gather_facts: false
+  become: true
+  vars:
+    root: /home/student/rhcsa-lab/obj03-08
+  tasks:
+    - name: Remove exercise packages
+      ansible.builtin.command: "rpm -e {{ item }}"
+      loop:
+        - rhcsa-system
+        - rhcsa-local
+      changed_when: false
+      failed_when: false
+
+    - ansible.builtin.file:
+        path: /etc/yum.repos.d/rhcsa-system.repo
+        state: absent
+
+    - ansible.builtin.file:
+        path: "{{ root }}"
+        state: absent
+
+    - ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: student
+        group: student
+        mode: "0755"
+      loop:
+        - "{{ root }}"
+        - "{{ root }}/assets"
+        - "{{ root }}/output"
+
+    - ansible.builtin.copy:
+        src: /var/lib/rhcsa-lab/obj03/packages/rhcsa-local-1.0-1.noarch.rpm
+        dest: "{{ root }}/assets/rhcsa-local-1.0-1.noarch.rpm"
+        remote_src: true
+        owner: student
+        group: student
+        mode: "0644"
+
+    - ansible.builtin.command: dnf -q clean metadata
+      changed_when: true

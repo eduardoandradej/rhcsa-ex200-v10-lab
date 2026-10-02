@@ -1,0 +1,33 @@
+---
+- name: Prepare obj03-06 update lab
+  hosts: servera
+  gather_facts: false
+  become: true
+  tasks:
+    - ansible.builtin.command: rpm -e rhcsa-update-demo
+      changed_when: false
+      failed_when: false
+
+    - ansible.builtin.copy:
+        dest: /etc/yum.repos.d/rhcsa-update.repo
+        mode: "0644"
+        content: |
+          [rhcsa-base]
+          name=RHCSA Base Repository
+          baseurl=file:///var/lib/rhcsa-lab/obj03/repos/base
+          enabled=1
+          gpgcheck=0
+
+          [rhcsa-errata]
+          name=RHCSA Errata Repository
+          baseurl=file:///var/lib/rhcsa-lab/obj03/repos/errata
+          enabled=0
+          gpgcheck=0
+
+    - ansible.builtin.command: >
+        dnf -y --disablerepo=* --enablerepo=rhcsa-base
+        install rhcsa-update-demo-1.0-1
+      changed_when: true
+
+    - ansible.builtin.command: dnf -q clean metadata
+      changed_when: true

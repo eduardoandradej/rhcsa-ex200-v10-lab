@@ -1,0 +1,50 @@
+---
+- name: Prepare obj02-01 identity lab
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    root: /home/student/rhcsa-lab/obj02-01
+  tasks:
+    - name: Remove old users
+      ansible.builtin.user:
+        name: "{{ item }}"
+        state: absent
+        remove: true
+      loop: [acctalpha, acctbeta]
+    - name: Remove old group
+      ansible.builtin.group:
+        name: auditgrp
+        state: absent
+    - name: Create audit group
+      ansible.builtin.group:
+        name: auditgrp
+        gid: 32001
+        state: present
+    - name: Create acctalpha
+      ansible.builtin.user:
+        name: acctalpha
+        uid: 2201
+        comment: "Account Alpha"
+        groups: auditgrp
+        append: true
+        shell: /bin/bash
+        state: present
+    - name: Create acctbeta
+      ansible.builtin.user:
+        name: acctbeta
+        uid: 2202
+        comment: "Account Beta"
+        shell: /bin/bash
+        state: present
+    - name: Recreate lab directory
+      ansible.builtin.file:
+        path: "{{ root }}"
+        state: absent
+    - name: Create output directory
+      ansible.builtin.file:
+        path: "{{ root }}/output"
+        state: directory
+        owner: student
+        group: student
+        mode: "0755"

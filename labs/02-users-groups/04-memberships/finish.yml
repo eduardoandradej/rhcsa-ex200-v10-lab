@@ -1,0 +1,15 @@
+---
+- name: Finish obj02-04 membership lab
+  hosts: servera
+  gather_facts: false
+  become: true
+  tasks:
+    - ansible.builtin.user:
+        name: "{{ item }}"
+        state: absent
+        remove: true
+      loop: [teamuser1, teamuser2]
+    - ansible.builtin.group:
+        name: "{{ item }}"
+        state: absent
+      loop: [projecta, projectb]

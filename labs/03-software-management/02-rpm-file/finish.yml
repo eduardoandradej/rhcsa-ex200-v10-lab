@@ -1,0 +1,13 @@
+---
+- name: Finish obj03-02 local RPM inspection lab
+  hosts: servera
+  gather_facts: false
+  become: true
+  tasks:
+    - ansible.builtin.command: rpm -e rhcsa-inspect
+      register: erase_result
+      changed_when: erase_result.rc == 0
+      failed_when: false
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj03-02
+        state: absent

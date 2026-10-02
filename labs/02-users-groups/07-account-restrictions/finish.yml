@@ -1,0 +1,11 @@
+---
+- name: Finish obj02-07 account restriction lab
+  hosts: servera
+  gather_facts: false
+  become: true
+  tasks:
+    - ansible.builtin.user:
+        name: "{{ item }}"
+        state: absent
+        remove: true
+      loop: [departed1, serviceacct, tempcontract, recoveruser]

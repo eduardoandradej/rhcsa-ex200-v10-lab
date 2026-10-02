@@ -1,0 +1,27 @@
+---
+- name: Prepare obj03-04 DNF install/remove lab
+  hosts: servera
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Remove exercise packages
+      ansible.builtin.command: "rpm -e {{ item }}"
+      loop:
+        - rhcsa-toolkit
+        - rhcsa-temp
+      register: erase_results
+      changed_when: false
+      failed_when: false
+
+    - ansible.builtin.copy:
+        dest: /etc/yum.repos.d/rhcsa-base.repo
+        mode: "0644"
+        content: |
+          [rhcsa-base]
+          name=RHCSA Base Repository
+          baseurl=file:///var/lib/rhcsa-lab/obj03/repos/base
+          enabled=1
+          gpgcheck=0
+
+    - ansible.builtin.command: dnf -q clean metadata
+      changed_when: true

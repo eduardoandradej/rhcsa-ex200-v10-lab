@@ -1,0 +1,183 @@
+---
+- name: Prepare deterministic RPM/DNF assets for Objective 03
+  hosts: managed
+  gather_facts: false
+  become: true
+
+  vars:
+    obj03_root: /var/lib/rhcsa-lab/obj03
+    build_root: /var/tmp/rhcsa-obj03-rpmbuild
+
+  tasks:
+    - name: Ensure Objective 03 infrastructure packages are installed
+      ansible.builtin.dnf:
+        name:
+          - rpm-build
+          - createrepo_c
+          - cpio
+          - dnf-plugins-core
+        state: present
+
+    - name: Recreate Objective 03 asset root
+      ansible.builtin.file:
+        path: "{{ obj03_root }}"
+        state: absent
+
+    - name: Create Objective 03 repository directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - "{{ obj03_root }}"
+        - "{{ obj03_root }}/repos"
+        - "{{ obj03_root }}/repos/base"
+        - "{{ obj03_root }}/repos/errata"
+        - "{{ obj03_root }}/packages"
+
+    - name: Recreate RPM build root
+      ansible.builtin.file:
+        path: "{{ build_root }}"
+        state: absent
+
+    - name: Create RPM build tree
+      ansible.builtin.file:
+        path: "{{ build_root }}/{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - BUILD
+        - BUILDROOT
+        - RPMS
+        - SOURCES
+        - SPECS
+        - SRPMS
+
+    - name: Install Objective 03 package build script
+      ansible.builtin.copy:
+        dest: /var/tmp/build-rhcsa-obj03-rpms.sh
+        mode: "0755"
+        content: |
+          #!/usr/bin/env bash
+          set -Eeuo pipefail
+
+          TOP="{{ build_root }}"
+          ASSET="{{ obj03_root }}"
+
+          build_simple() {
+              local name="$1"
+              local version="$2"
+              local summary="$3"
+              local spec="$TOP/SPECS/${name}-${version}.spec"
+
+              cat > "$spec" <<SPEC
+          Name:           ${name}
+          Version:        ${version}
+          Release:        1
+          Summary:        ${summary}
+          License:        MIT
+          BuildArch:      noarch
+
+          %description
+          Deterministic training package for RHCSA software-management labs.
+
+          %install
+          mkdir -p %{buildroot}/usr/local/share/${name}
+          printf '%s\n' '${name} ${version}-1' > %{buildroot}/usr/local/share/${name}/version.txt
+
+          %files
+          /usr/local/share/${name}/version.txt
+          SPEC
+
+              rpmbuild \
+                --define "_topdir $TOP" \
+                -bb "$spec" >/dev/null
+          }
+
+          build_inspect() {
+              local spec="$TOP/SPECS/rhcsa-inspect.spec"
+
+              cat > "$spec" <<'SPEC'
+          Name:           rhcsa-inspect
+          Version:        1.0
+          Release:        1
+          Summary:        RPM inspection practice package
+          License:        MIT
+          BuildArch:      noarch
+
+          %description
+          Package used to practice querying and extracting a local RPM file.
+
+          %install
+          mkdir -p %{buildroot}/etc
+          mkdir -p %{buildroot}/usr/local/bin
+          mkdir -p %{buildroot}/usr/share/doc/rhcsa-inspect
+          printf '%s\n' 'mode=training' > %{buildroot}/etc/rhcsa-inspect.conf
+          printf '%s\n' '#!/usr/bin/env bash' 'echo RHCSA inspect package' > %{buildroot}/usr/local/bin/rhcsa-inspect
+          chmod 0755 %{buildroot}/usr/local/bin/rhcsa-inspect
+          printf '%s\n' 'Objective 03 local RPM inspection asset.' > %{buildroot}/usr/share/doc/rhcsa-inspect/README
+
+          %post
+          echo "rhcsa-inspect installed" > /var/tmp/rhcsa-inspect-post.log
+
+          %preun
+          if [ "$1" -eq 0 ]; then
+              rm -f /var/tmp/rhcsa-inspect-post.log
+          fi
+
+          %files
+          %config(noreplace) /etc/rhcsa-inspect.conf
+          /usr/local/bin/rhcsa-inspect
+          %doc /usr/share/doc/rhcsa-inspect/README
+          SPEC
+
+              rpmbuild \
+                --define "_topdir $TOP" \
+                -bb "$spec" >/dev/null
+          }
+
+          build_simple rhcsa-toolkit 1.0 "RHCSA deterministic toolkit package"
+          build_simple rhcsa-temp 1.0 "RHCSA temporary package"
+          build_simple rhcsa-update-demo 1.0 "RHCSA update demo version one"
+          build_simple rhcsa-update-demo 2.0 "RHCSA update demo version two"
+          build_simple rhcsa-history 1.0 "RHCSA DNF history package"
+          build_simple rhcsa-system 1.0 "RHCSA integrated system package version one"
+          build_simple rhcsa-system 2.0 "RHCSA integrated system package version two"
+          build_simple rhcsa-local 1.0 "RHCSA local RPM install package"
+          build_inspect
+
+          cp "$TOP"/RPMS/noarch/rhcsa-toolkit-1.0-1.noarch.rpm "$ASSET/repos/base/"
+          cp "$TOP"/RPMS/noarch/rhcsa-temp-1.0-1.noarch.rpm "$ASSET/repos/base/"
+          cp "$TOP"/RPMS/noarch/rhcsa-update-demo-1.0-1.noarch.rpm "$ASSET/repos/base/"
+          cp "$TOP"/RPMS/noarch/rhcsa-history-1.0-1.noarch.rpm "$ASSET/repos/base/"
+          cp "$TOP"/RPMS/noarch/rhcsa-system-1.0-1.noarch.rpm "$ASSET/repos/base/"
+
+          cp "$TOP"/RPMS/noarch/rhcsa-update-demo-2.0-1.noarch.rpm "$ASSET/repos/errata/"
+          cp "$TOP"/RPMS/noarch/rhcsa-system-2.0-1.noarch.rpm "$ASSET/repos/errata/"
+
+          cp "$TOP"/RPMS/noarch/rhcsa-inspect-1.0-1.noarch.rpm "$ASSET/packages/"
+          cp "$TOP"/RPMS/noarch/rhcsa-local-1.0-1.noarch.rpm "$ASSET/packages/"
+
+          createrepo_c "$ASSET/repos/base" >/dev/null
+          createrepo_c "$ASSET/repos/errata" >/dev/null
+
+    - name: Build deterministic RPM assets
+      ansible.builtin.command: /var/tmp/build-rhcsa-obj03-rpms.sh
+      changed_when: true
+
+    - name: Verify base repository metadata
+      ansible.builtin.stat:
+        path: "{{ obj03_root }}/repos/base/repodata/repomd.xml"
+      register: base_repo_metadata
+
+    - name: Verify errata repository metadata
+      ansible.builtin.stat:
+        path: "{{ obj03_root }}/repos/errata/repodata/repomd.xml"
+      register: errata_repo_metadata
+
+    - name: Assert deterministic repositories are ready
+      ansible.builtin.assert:
+        that:
+          - base_repo_metadata.stat.exists
+          - errata_repo_metadata.stat.exists
+        fail_msg: "Objective 03 deterministic repositories were not created."

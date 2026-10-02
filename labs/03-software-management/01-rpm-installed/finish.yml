@@ -1,0 +1,8 @@
+---
+- name: Finish obj03-01 RPM query lab
+  hosts: servera
+  gather_facts: false
+  tasks:
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj03-01
+        state: absent

@@ -1,0 +1,11 @@
+---
+id: obj02-08
+title: "Desafio integrado Users & Groups"
+title_en: "Integrated Users & Groups challenge"
+objective: "Objective 02 — Users & Groups"
+target: [serverb]
+difficulty: 3
+duration: 25
+compatibility: {local: "RHEL 9.8", target: "RHEL 10", level: exact}
+reset_policy: ansible
+status: ready

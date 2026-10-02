@@ -1,0 +1,12 @@
+---
+- name: Finish obj03-05 repository configuration lab
+  hosts: servera
+  gather_facts: false
+  become: true
+  tasks:
+    - ansible.builtin.file:
+        path: /etc/yum.repos.d/rhcsa-custom.repo
+        state: absent
+    - ansible.builtin.command: rpm -e rhcsa-toolkit
+      changed_when: false
+      failed_when: false

@@ -1,0 +1,17 @@
+---
+- name: Finish obj02-01 identity lab
+  hosts: servera
+  gather_facts: false
+  become: true
+  tasks:
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj02-01
+        state: absent
+    - ansible.builtin.user:
+        name: "{{ item }}"
+        state: absent
+        remove: true
+      loop: [acctalpha, acctbeta]
+    - ansible.builtin.group:
+        name: auditgrp
+        state: absent

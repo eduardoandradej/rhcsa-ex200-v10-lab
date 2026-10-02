@@ -1,0 +1,36 @@
+---
+- name: Prepare obj03-03 DNF discovery lab
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    root: /home/student/rhcsa-lab/obj03-03
+  tasks:
+    - ansible.builtin.command: rpm -e rhcsa-toolkit
+      register: erase_result
+      changed_when: erase_result.rc == 0
+      failed_when: false
+
+    - ansible.builtin.file:
+        path: "{{ root }}"
+        state: absent
+
+    - ansible.builtin.file:
+        path: "{{ root }}/output"
+        state: directory
+        owner: student
+        group: student
+        mode: "0755"
+
+    - ansible.builtin.copy:
+        dest: /etc/yum.repos.d/rhcsa-discovery.repo
+        mode: "0644"
+        content: |
+          [rhcsa-discovery]
+          name=RHCSA Discovery Repository
+          baseurl=file:///var/lib/rhcsa-lab/obj03/repos/base
+          enabled=1
+          gpgcheck=0
+
+    - ansible.builtin.command: dnf -q clean metadata
+      changed_when: true

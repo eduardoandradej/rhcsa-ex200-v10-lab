@@ -1,0 +1,14 @@
+---
+- name: Finish obj02-02 user management lab
+  hosts: servera
+  gather_facts: false
+  become: true
+  tasks:
+    - ansible.builtin.user:
+        name: "{{ item }}"
+        state: absent
+        remove: true
+      loop: [opsalpha, opsbeta, opstemp]
+    - ansible.builtin.file:
+        path: /srv/opsbeta
+        state: absent

@@ -1,0 +1,14 @@
+---
+id: obj03-06
+title: "Atualizar pacote por repositório de errata"
+title_en: "Upgrade a package from an errata repository"
+objective: "Objective 03 — RPM, DNF & Repositories"
+target: [servera]
+difficulty: 3
+duration: 18
+compatibility:
+  local: "RHEL 9.8"
+  target: "RHEL 10"
+  level: exact
+reset_policy: ansible
+status: ready
