@@ -1,0 +1,9 @@
+---
+- name: Finish obj04-07 user-report lab
+  hosts: servera
+  gather_facts: false
+  become: true
+  tasks:
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj04-07
+        state: absent

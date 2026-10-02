@@ -6,15 +6,15 @@
 |---|---|---:|
 | 01 | Essential Tools | 10 — concluído |
 | 02 | Users & Groups | 8 — concluído |
-| 03 | RPM, DNF & Repositories | 8 — implementação v0.9.0 |
+| 03 | RPM, DNF & Repositories | 8 — concluído |
+| 04 | Simple Shell Scripts | 8 — implementação v1.0.0 |
 
-Total após esta entrega: **26 labs**.
+Total após esta entrega: **34 labs**.
 
 ## Próximos blocos
 
 | Objective | Tema | Labs estimados |
 |---|---|---:|
-| 04 | Shell scripting para EX200 | 7 |
 | 05 | Processos e serviços systemd | 9 |
 | 06 | Networking / NetworkManager | 8 |
 | 07 | Scheduling, logs e chrony | 8 |
@@ -24,14 +24,16 @@ Total após esta entrega: **26 labs**.
 | 11 | NFS e autofs | 6 |
 | 12 | Simulados integrados EX200 | 6 |
 
-## Infraestrutura determinística de software
+## Critério de qualidade
 
-Objective 03 não depende de uma versão específica publicada na CDN.
-`ansible/prepare-objective03.yml` cria repositórios locais com pequenos RPMs
-originais de laboratório:
+Cada laboratório `ready` inclui:
 
-- base repository;
-- errata repository;
-- RPMs locais para inspeção/instalação.
+- preparação idempotente;
+- enunciado PT-BR e EN;
+- grader por estado/comportamento;
+- limpeza;
+- solução de referência;
+- solver de regressão automatizado.
 
-Isso permite praticar RPM/DNF reais e manter a regressão reproduzível.
+A release gate valida Python, YAML, Ansible, contrato `--json`, sintaxe dos
+reference solvers e smoke da CLI.

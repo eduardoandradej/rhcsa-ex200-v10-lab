@@ -1,0 +1,9 @@
+---
+- name: Finish obj04-08 integrated shell scripting challenge
+  hosts: serverb
+  gather_facts: false
+  become: true
+  tasks:
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj04-08
+        state: absent

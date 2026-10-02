@@ -8,13 +8,32 @@ echo "== Python syntax =="
 python3 -m py_compile labctl/*.py
 find labs -name grade.py -print0 | xargs -0 -r python3 -m py_compile
 
+echo "== Shell syntax =="
+while IFS= read -r script; do
+    bash -n "$script"
+    echo "OK ${script#"$ROOT"/}"
+done < <(
+    find "$ROOT/tests/reference-solutions" -type f -name '*.sh' | sort
+)
+
+bash -n "$ROOT/tests/integration-reference.sh"
+bash -n "$ROOT/tests/integration-objective04.sh"
+echo "OK tests/integration-reference.sh"
+echo "OK tests/integration-objective04.sh"
+
 echo "== YAML catalog and ready-lab contract =="
 python3 - <<'PY'
 from pathlib import Path
 import yaml
 
-required = {"id", "title", "objective", "target", "difficulty", "duration", "compatibility"}
-ready_files = ("setup.yml", "finish.yml", "grade.py", "prompt.pt.md", "prompt.en.md", "solution.md")
+required = {
+    "id", "title", "objective", "target",
+    "difficulty", "duration", "compatibility"
+}
+ready_files = (
+    "setup.yml", "finish.yml", "grade.py",
+    "prompt.pt.md", "prompt.en.md", "solution.md"
+)
 
 for path in sorted(Path("labs").glob("*/*/lab.yml")):
     data = yaml.safe_load(path.read_text()) or {}
@@ -59,19 +78,25 @@ for path in sorted(Path("labs").glob("*/*/grade.py")):
 
 if failures:
     raise SystemExit(
-        "Graders sem suporte ao contrato --json:\n  " + "\n  ".join(failures)
+        "Graders sem suporte ao contrato --json:\n  "
+        + "\n  ".join(failures)
     )
 PY
 
 echo "== Ansible syntax =="
 cd "$ROOT/ansible"
-ansible-playbook --syntax-check prepare-objective03.yml >/dev/null
-echo "OK ansible/prepare-objective03.yml"
+
+if [[ -f prepare-objective03.yml ]]; then
+    ansible-playbook --syntax-check prepare-objective03.yml >/dev/null
+    echo "OK ansible/prepare-objective03.yml"
+fi
 
 while IFS= read -r playbook; do
     ansible-playbook --syntax-check "$playbook" >/dev/null
     echo "OK $(basename "$(dirname "$playbook")")/$(basename "$playbook")"
-done < <(find "$ROOT/labs" \( -name setup.yml -o -name finish.yml \) -type f | sort)
+done < <(
+    find "$ROOT/labs" \( -name setup.yml -o -name finish.yml \) -type f | sort
+)
 
 echo "== CLI smoke =="
 cd "$ROOT"

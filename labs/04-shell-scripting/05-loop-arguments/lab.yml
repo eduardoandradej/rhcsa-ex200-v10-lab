@@ -1,0 +1,14 @@
+---
+id: obj04-05
+title: "Loop sobre argumentos da linha de comando"
+title_en: "Loop over command-line arguments"
+objective: "Objective 04 — Simple Shell Scripts"
+target: [servera]
+difficulty: 2
+duration: 16
+compatibility:
+  local: "RHEL 9.8"
+  target: "RHEL 10"
+  level: exact
+reset_policy: ansible
+status: ready

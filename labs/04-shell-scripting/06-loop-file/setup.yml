@@ -1,0 +1,28 @@
+---
+- name: Prepare obj04-06 file-loop lab
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    root: /home/student/rhcsa-lab/obj04-06
+  tasks:
+    - ansible.builtin.file:
+        path: "{{ root }}"
+        state: absent
+
+    - ansible.builtin.file:
+        path: "{{ root }}/assets"
+        state: directory
+        owner: student
+        group: student
+        mode: "0755"
+
+    - ansible.builtin.copy:
+        dest: "{{ root }}/assets/services.list"
+        owner: student
+        group: student
+        mode: "0644"
+        content: |
+          sshd
+          chronyd
+          firewalld

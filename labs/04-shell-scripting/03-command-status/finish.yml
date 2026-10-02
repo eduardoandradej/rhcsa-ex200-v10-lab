@@ -1,0 +1,9 @@
+---
+- name: Finish obj04-03 command-status lab
+  hosts: servera
+  gather_facts: false
+  become: true
+  tasks:
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj04-03
+        state: absent

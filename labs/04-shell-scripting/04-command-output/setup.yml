@@ -1,0 +1,15 @@
+---
+- name: Prepare obj04-04 command-output lab
+  hosts: servera
+  gather_facts: false
+  become: true
+  tasks:
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj04-04
+        state: absent
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj04-04
+        state: directory
+        owner: student
+        group: student
+        mode: "0755"

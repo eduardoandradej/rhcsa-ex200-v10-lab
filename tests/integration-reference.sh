@@ -12,6 +12,8 @@ if [[ "$#" -eq 0 ]]; then
         obj02-05 obj02-06 obj02-07 obj02-08
         obj03-01 obj03-02 obj03-03 obj03-04
         obj03-05 obj03-06 obj03-07 obj03-08
+        obj04-01 obj04-02 obj04-03 obj04-04
+        obj04-05 obj04-06 obj04-07 obj04-08
     )
 else
     LABS=("$@")
