@@ -3,59 +3,11 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
-from pathlib import Path
-import subprocess
-import sys
+
+from labctl.remote import json_from_remote_python
 
 
-PROJECT_ROOT = Path(
-    os.environ.get(
-        "RHCSA_LAB_ROOT",
-        str(Path(__file__).resolve().parents[3]),
-    )
-)
-ANSIBLE_DIR = PROJECT_ROOT / "ansible"
-
-
-def run(args: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess:
-    return subprocess.run(
-        args,
-        cwd=str(cwd) if cwd else None,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=False,
-        timeout=30,
-    )
-
-
-def inventory_host(name: str) -> dict:
-    proc = run(["ansible-inventory", "--host", name], cwd=ANSIBLE_DIR)
-    if proc.returncode != 0:
-        raise RuntimeError(proc.stderr.strip() or "ansible-inventory failed")
-    return json.loads(proc.stdout)
-
-
-def ssh_target(name: str) -> tuple[list[str], str]:
-    data = inventory_host(name)
-    user = str(data.get("ansible_user", "student"))
-    key = data.get("ansible_ssh_private_key_file")
-
-    args = [
-        "ssh",
-        "-o", "BatchMode=yes",
-        "-o", "ConnectTimeout=8",
-    ]
-    if key:
-        args += ["-i", str(key)]
-
-    # Use the inventory hostname (servera/serverb), because the bastion
-    # already manages SSH trust for these stable lab aliases.
-    return args, f"{user}@{name}"
-
-
-REMOTE_CHECKER = r'''
+REMOTE_CHECKER = r"""
 from pathlib import Path
 import json
 
@@ -150,7 +102,7 @@ print(json.dumps({
     "checks": checks,
     "score": score,
 }, ensure_ascii=False))
-'''
+"""
 
 
 def main() -> int:
@@ -158,25 +110,10 @@ def main() -> int:
     parser.add_argument("--json", action="store_true")
     parser.parse_args()
 
-    ssh_args, target = ssh_target("servera")
-    proc = subprocess.run(
-        ssh_args + [target, "python3", "-"],
-        input=REMOTE_CHECKER,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=False,
-        timeout=30,
-    )
-
-    if proc.returncode != 0:
-        print(proc.stderr.strip() or proc.stdout.strip(), file=sys.stderr)
-        return 2
-
     try:
-        payload = json.loads(proc.stdout)
-    except json.JSONDecodeError:
-        print("grader remoto retornou JSON inválido", file=sys.stderr)
+        payload = json_from_remote_python("servera", REMOTE_CHECKER)
+    except Exception as exc:
+        print(str(exc))
         return 2
 
     print(json.dumps(payload, ensure_ascii=False))

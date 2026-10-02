@@ -1,0 +1,10 @@
+---
+- name: Finish obj01-02 redirection and pipes lab
+  hosts: servera
+  gather_facts: false
+
+  tasks:
+    - name: Remove exercise data
+      ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj01-02
+        state: absent

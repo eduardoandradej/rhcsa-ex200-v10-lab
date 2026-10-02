@@ -1,0 +1,47 @@
+---
+- name: Prepare obj01-03 grep and regular expressions lab
+  hosts: servera
+  gather_facts: false
+
+  vars:
+    lab_root: /home/student/rhcsa-lab/obj01-03
+
+  tasks:
+    - name: Remove previous exercise data
+      ansible.builtin.file:
+        path: "{{ lab_root }}"
+        state: absent
+
+    - name: Create exercise directories
+      ansible.builtin.file:
+        path: "{{ lab_root }}/{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - input
+        - output
+
+    - name: Create systems data
+      ansible.builtin.copy:
+        dest: "{{ lab_root }}/input/systems.txt"
+        mode: "0644"
+        content: |
+          SRV-001|web01|prod|active|192.168.100.21
+          SRV-002|web02|prod|active|192.168.100.22
+          SRV-003|db01|prod|maintenance|192.168.100.31
+          DEV-101|web-dev01|dev|active|10.10.0.11
+          DEV-102|api-dev01|dev|disabled|10.10.0.12
+          SRV-004|api01|prod|active|192.168.100.41
+          TST-201|web-test01|test|active|172.16.0.21
+
+    - name: Create event log data
+      ansible.builtin.copy:
+        dest: "{{ lab_root }}/input/events.log"
+        mode: "0644"
+        content: |
+          2026-10-02T10:00:00 INFO web01 service started
+          2026-10-02T10:01:00 WARN web02 response slow
+          2026-10-02T10:02:00 INFO db01 connection accepted
+          2026-10-02T10:03:00 ERROR api01 backend timeout
+          2026-10-02T10:04:00 INFO web01 request completed
+          2026-10-02T10:05:00 WARN db01 replication lag

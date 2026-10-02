@@ -1,0 +1,68 @@
+---
+- name: Prepare obj01-02 redirection and pipes lab
+  hosts: servera
+  gather_facts: false
+
+  vars:
+    lab_root: /home/student/rhcsa-lab/obj01-02
+
+  tasks:
+    - name: Remove previous exercise data
+      ansible.builtin.file:
+        path: "{{ lab_root }}"
+        state: absent
+
+    - name: Create exercise directories
+      ansible.builtin.file:
+        path: "{{ lab_root }}/{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - input
+        - output
+        - bin
+
+    - name: Install stream demonstration command
+      ansible.builtin.copy:
+        dest: "{{ lab_root }}/bin/stream-demo"
+        mode: "0755"
+        content: |
+          #!/usr/bin/env bash
+          printf '%s\n' 'INFO web01 ready'
+          printf '%s\n' 'WARN cache threshold' >&2
+          printf '%s\n' 'INFO db01 ready'
+          printf '%s\n' 'ERROR backup failed' >&2
+          printf '%s\n' 'INFO api01 ready'
+
+    - name: Install append demonstration command
+      ansible.builtin.copy:
+        dest: "{{ lab_root }}/bin/append-demo"
+        mode: "0755"
+        content: |
+          #!/usr/bin/env bash
+          printf '%s\n' 'audit-check-complete'
+
+    - name: Create services input
+      ansible.builtin.copy:
+        dest: "{{ lab_root }}/input/services.txt"
+        mode: "0644"
+        content: |
+          chronyd
+          sshd
+          firewalld
+          sshd
+          NetworkManager
+          chronyd
+          cockpit
+
+    - name: Create status input
+      ansible.builtin.copy:
+        dest: "{{ lab_root }}/input/status.txt"
+        mode: "0644"
+        content: |
+          web01 active
+          web02 inactive
+          db01 active
+          api01 active
+          cache01 inactive
+          nfs01 active

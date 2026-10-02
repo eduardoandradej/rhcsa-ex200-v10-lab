@@ -1,13 +1,14 @@
 ---
 id: obj01-02
 title: "Redirecionamento e pipes"
+title_en: "Redirection and pipes"
 objective: "Objective 01 — Essential Tools"
 
 target:
   - servera
 
 difficulty: 2
-duration: 7
+duration: 12
 
 compatibility:
   local: "RHEL 9.8"
@@ -15,4 +16,4 @@ compatibility:
   level: exact
 
 reset_policy: ansible
-status: catalog-only
+status: ready
