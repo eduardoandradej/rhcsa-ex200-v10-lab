@@ -1,0 +1,14 @@
+---
+id: obj07-03
+title: "Agendar tarefa recorrente em /etc/cron.d"
+title_en: "Schedule a recurring task in /etc/cron.d"
+objective: "Objective 07 — Scheduling, Temporary Files, Logging & Time"
+target: [servera]
+difficulty: 2
+duration: 18
+compatibility:
+  local: "RHEL 9.8"
+  target: "RHEL 10"
+  level: concept-and-state
+reset_policy: ansible
+status: ready

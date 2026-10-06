@@ -1,0 +1,26 @@
+---
+- name: Prepare obj07-05 journal lab
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars: {root: /home/student/rhcsa-lab/obj07-05}
+  tasks:
+    - ansible.builtin.file: {path: "{{ root }}", state: absent}
+    - ansible.builtin.file: {path: "{{ root }}/output", state: directory, owner: student, group: student, mode: "0755"}
+    - ansible.builtin.copy:
+        dest: /etc/systemd/system/rhcsa-journal.service
+        mode: "0644"
+        content: |
+          [Unit]
+          Description=RHCSA journal training event
+          [Service]
+          Type=oneshot
+          ExecStart=/usr/bin/echo OBJ07-UNIT-EVENT
+    - ansible.builtin.command: systemctl daemon-reload
+      changed_when: true
+    - ansible.builtin.shell: |
+        logger -t obj07-journal -p user.info 'OBJ07-JOURNAL-INFO'
+        logger -t obj07-journal -p user.warning 'OBJ07-JOURNAL-WARNING'
+        systemctl start rhcsa-journal.service
+        journalctl --sync
+      changed_when: true

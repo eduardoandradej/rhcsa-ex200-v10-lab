@@ -1,0 +1,10 @@
+---
+- name: Finish obj07-02 tmpfiles lab
+  hosts: servera
+  gather_facts: false
+  become: true
+  tasks:
+    - ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop: [/etc/tmpfiles.d/rhcsa-momentary.conf, /run/rhcsa-momentary, /home/student/rhcsa-lab/obj07-02]

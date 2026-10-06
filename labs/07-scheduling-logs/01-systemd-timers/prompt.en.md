@@ -1,0 +1,1 @@
+On `servera`, copy the vendor `sysstat-collect.timer` to `/etc/systemd/system`, change `OnCalendar` to every two minutes, reload systemd, enable/start the timer, and save `systemctl cat` and `list-timers` evidence. Do not edit `/usr/lib/systemd/system` directly.

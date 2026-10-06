@@ -1,0 +1,19 @@
+---
+- name: Finish obj07-08 integrated challenge
+  hosts: serverb
+  gather_facts: false
+  become: true
+  tasks:
+    - ansible.builtin.shell: 'systemctl disable --now rhcsa-audit.timer >/dev/null 2>&1 || true'
+      changed_when: true
+    - ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop: [/etc/rsyslog.d/rhcsa-audit.conf, /etc/systemd/system/rhcsa-audit.service, /etc/systemd/system/rhcsa-audit.timer]
+    - ansible.builtin.command: systemctl daemon-reload
+      changed_when: true
+    - ansible.builtin.systemd: {name: rsyslog, state: restarted}
+    - ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop: [/var/log/rhcsa-audit.log, /home/student/rhcsa-lab/obj07-08]

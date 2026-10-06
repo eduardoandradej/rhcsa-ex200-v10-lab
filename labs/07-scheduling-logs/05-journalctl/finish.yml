@@ -1,0 +1,10 @@
+---
+- name: Finish obj07-05 journal lab
+  hosts: servera
+  gather_facts: false
+  become: true
+  tasks:
+    - ansible.builtin.file: {path: /etc/systemd/system/rhcsa-journal.service, state: absent}
+    - ansible.builtin.command: systemctl daemon-reload
+      changed_when: true
+    - ansible.builtin.file: {path: /home/student/rhcsa-lab/obj07-05, state: absent}

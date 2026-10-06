@@ -1,0 +1,14 @@
+---
+id: obj07-06
+title: "Configurar journal persistente"
+title_en: "Configure persistent system journal storage"
+objective: "Objective 07 — Scheduling, Temporary Files, Logging & Time"
+target: [servera]
+difficulty: 3
+duration: 24
+compatibility:
+  local: "RHEL 9.8"
+  target: "RHEL 10"
+  level: concept-and-state
+reset_policy: ansible
+status: ready

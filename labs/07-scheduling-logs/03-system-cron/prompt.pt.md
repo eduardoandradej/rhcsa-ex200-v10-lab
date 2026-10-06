@@ -1,0 +1,1 @@
+No `servera`, crie `/etc/cron.d/rhcsa-report` com `SHELL=/bin/bash`, `PATH=/sbin:/bin:/usr/sbin:/usr/bin`, `MAILTO=root` e um job que execute como `student` a cada 5 minutos: `/usr/bin/id -un >> /home/student/rhcsa-lab/obj07-03/cron-run.txt`. Não edite `/etc/crontab`. Salve o arquivo em `output/cron.txt`.

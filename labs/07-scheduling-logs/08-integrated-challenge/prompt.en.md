@@ -1,0 +1,1 @@
+Configure rsyslog local5.notice routing, a oneshot logger service, and a systemd timer using OnBootSec=1min and OnUnitActiveSec=5min. Enable/start the timer, manually start the service for immediate evidence, and save timer/syslog/journal output.

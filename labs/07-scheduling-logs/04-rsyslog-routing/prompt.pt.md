@@ -1,0 +1,1 @@
+No `servera`, crie uma regra em `/etc/rsyslog.d/` para gravar mensagens `local6.debug` ou mais severas em `/var/log/rhcsa-debug.log`. Valide a configuração, reinicie `rsyslog`, gere `OBJ07-RSYSLOG-DEBUG` com `logger -p local6.debug`, e salve as últimas linhas do arquivo em `output/log.txt`.

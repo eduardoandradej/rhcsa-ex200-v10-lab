@@ -1,0 +1,20 @@
+---
+- name: Finish obj07-01 systemd timer lab
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars: {state_dir: /var/lib/rhcsa-lab/obj07-01}
+  tasks:
+    - ansible.builtin.file: {path: /etc/systemd/system/sysstat-collect.timer, state: absent}
+    - ansible.builtin.command: systemctl daemon-reload
+      changed_when: true
+    - name: Restore timer state
+      ansible.builtin.shell: |
+        enabled="$(cat {{ state_dir }}/enabled)"; active="$(cat {{ state_dir }}/active)"
+        if [ "$enabled" = enabled ]; then systemctl enable sysstat-collect.timer >/dev/null 2>&1 || true; else systemctl disable sysstat-collect.timer >/dev/null 2>&1 || true; fi
+        if [ "$active" = active ]; then systemctl start sysstat-collect.timer; else systemctl stop sysstat-collect.timer >/dev/null 2>&1 || true; fi
+      changed_when: true
+    - ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop: [/home/student/rhcsa-lab/obj07-01, "{{ state_dir }}"]

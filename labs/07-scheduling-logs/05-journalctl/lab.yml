@@ -1,0 +1,14 @@
+---
+id: obj07-05
+title: "Filtrar eventos com journalctl"
+title_en: "Filter events with journalctl"
+objective: "Objective 07 — Scheduling, Temporary Files, Logging & Time"
+target: [servera]
+difficulty: 2
+duration: 20
+compatibility:
+  local: "RHEL 9.8"
+  target: "RHEL 10"
+  level: concept-and-state
+reset_policy: ansible
+status: ready

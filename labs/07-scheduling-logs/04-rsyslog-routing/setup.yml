@@ -1,0 +1,12 @@
+---
+- name: Prepare obj07-04 rsyslog lab
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars: {root: /home/student/rhcsa-lab/obj07-04}
+  tasks:
+    - ansible.builtin.file: {path: "{{ root }}", state: absent}
+    - ansible.builtin.file: {path: "{{ root }}/output", state: directory, owner: student, group: student, mode: "0755"}
+    - ansible.builtin.file: {path: /etc/rsyslog.d/rhcsa-debug.conf, state: absent}
+    - ansible.builtin.file: {path: /var/log/rhcsa-debug.log, state: absent}
+    - ansible.builtin.systemd: {name: rsyslog, state: started, enabled: true}

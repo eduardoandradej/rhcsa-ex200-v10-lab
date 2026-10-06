@@ -1,0 +1,23 @@
+---
+- name: Prepare obj07-01 systemd timer lab
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    root: /home/student/rhcsa-lab/obj07-01
+    state_dir: /var/lib/rhcsa-lab/obj07-01
+  tasks:
+    - ansible.builtin.file: {path: "{{ root }}", state: absent}
+    - ansible.builtin.file: {path: "{{ root }}/output", state: directory, owner: student, group: student, mode: "0755"}
+    - ansible.builtin.file: {path: "{{ state_dir }}", state: directory, mode: "0700"}
+    - ansible.builtin.shell: "systemctl is-enabled sysstat-collect.timer 2>/dev/null || true"
+      register: timer_enabled
+      changed_when: false
+    - ansible.builtin.shell: "systemctl is-active sysstat-collect.timer 2>/dev/null || true"
+      register: timer_active
+      changed_when: false
+    - ansible.builtin.copy: {dest: "{{ state_dir }}/enabled", content: "{{ timer_enabled.stdout | trim }}\n", mode: "0600"}
+    - ansible.builtin.copy: {dest: "{{ state_dir }}/active", content: "{{ timer_active.stdout | trim }}\n", mode: "0600"}
+    - ansible.builtin.file: {path: /etc/systemd/system/sysstat-collect.timer, state: absent}
+    - ansible.builtin.command: systemctl daemon-reload
+      changed_when: true

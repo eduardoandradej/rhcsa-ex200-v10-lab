@@ -1,0 +1,12 @@
+---
+- name: Finish obj07-04 rsyslog lab
+  hosts: servera
+  gather_facts: false
+  become: true
+  tasks:
+    - ansible.builtin.file: {path: /etc/rsyslog.d/rhcsa-debug.conf, state: absent}
+    - ansible.builtin.systemd: {name: rsyslog, state: restarted}
+    - ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop: [/var/log/rhcsa-debug.log, /home/student/rhcsa-lab/obj07-04]

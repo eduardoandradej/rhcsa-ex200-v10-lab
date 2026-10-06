@@ -1,0 +1,15 @@
+---
+- name: Finish obj07-06 persistent journal lab
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars: {state_dir: /var/lib/rhcsa-lab/obj07-06}
+  tasks:
+    - ansible.builtin.file: {path: /etc/systemd/journald.conf.d/99-rhcsa-persistent.conf, state: absent}
+    - ansible.builtin.systemd: {name: systemd-journald, state: restarted}
+    - ansible.builtin.shell: 'if [ "$(cat {{ state_dir }}/journal-existed)" = no ]; then rm -rf /var/log/journal; fi'
+      changed_when: true
+    - ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop: [/home/student/rhcsa-lab/obj07-06, "{{ state_dir }}"]

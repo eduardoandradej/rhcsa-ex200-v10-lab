@@ -1,0 +1,8 @@
+---
+- name: Finish obj07-03 cron lab
+  hosts: servera
+  gather_facts: false
+  become: true
+  tasks:
+    - ansible.builtin.file: {path: /etc/cron.d/rhcsa-report, state: absent}
+    - ansible.builtin.file: {path: /home/student/rhcsa-lab/obj07-03, state: absent}

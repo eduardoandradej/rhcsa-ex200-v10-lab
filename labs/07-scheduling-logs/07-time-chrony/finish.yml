@@ -1,0 +1,13 @@
+---
+- name: Finish obj07-07 time lab
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars: {state_dir: /var/lib/rhcsa-lab/obj07-07}
+  tasks:
+    - ansible.builtin.shell: 'timedatectl set-timezone "$(cat {{ state_dir }}/timezone)"'
+      changed_when: true
+    - ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop: [/home/student/rhcsa-lab/obj07-07, "{{ state_dir }}"]

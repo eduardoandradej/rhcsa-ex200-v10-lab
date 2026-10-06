@@ -1,0 +1,14 @@
+---
+id: obj07-08
+title: "Desafio integrado de scheduling e logs"
+title_en: "Integrated scheduling and logging challenge"
+objective: "Objective 07 — Scheduling, Temporary Files, Logging & Time"
+target: [serverb]
+difficulty: 4
+duration: 35
+compatibility:
+  local: "RHEL 9.8"
+  target: "RHEL 10"
+  level: concept-and-state
+reset_policy: ansible
+status: ready

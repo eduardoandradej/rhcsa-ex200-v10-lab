@@ -1,0 +1,20 @@
+---
+- name: Prepare Objective 07 scheduling, logging and time prerequisites
+  hosts: managed
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Ensure Objective 07 packages are installed
+      ansible.builtin.dnf:
+        name: [sysstat, cronie, rsyslog, chrony]
+        state: present
+    - name: Ensure required services are running
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        state: started
+        enabled: true
+      loop: [crond, rsyslog, chronyd]
+    - name: Verify Objective 07 commands
+      ansible.builtin.shell: "command -v {{ item }}"
+      loop: [systemctl, systemd-tmpfiles, crontab, logger, journalctl, timedatectl, chronyc]
+      changed_when: false

@@ -1,0 +1,17 @@
+---
+- name: Prepare obj07-07 time lab
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    root: /home/student/rhcsa-lab/obj07-07
+    state_dir: /var/lib/rhcsa-lab/obj07-07
+  tasks:
+    - ansible.builtin.file: {path: "{{ root }}", state: absent}
+    - ansible.builtin.file: {path: "{{ root }}/output", state: directory, owner: student, group: student, mode: "0755"}
+    - ansible.builtin.file: {path: "{{ state_dir }}", state: directory, mode: "0700"}
+    - ansible.builtin.command: timedatectl show -p Timezone --value
+      register: timezone
+      changed_when: false
+    - ansible.builtin.copy: {dest: "{{ state_dir }}/timezone", content: "{{ timezone.stdout | trim }}\n", mode: "0600"}
+    - ansible.builtin.systemd: {name: chronyd, state: started, enabled: true}

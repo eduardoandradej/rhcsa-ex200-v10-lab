@@ -1,0 +1,1 @@
+O setup criou eventos `obj07-journal` e iniciou `rhcsa-journal.service`. Salve em `output/tag.txt` os eventos do identificador dos últimos 10 minutos; em `output/warning.txt`, somente `warning` ou mais severos do mesmo identificador; e em `output/unit.txt`, eventos de `_SYSTEMD_UNIT=rhcsa-journal.service`. Use `--no-pager`.

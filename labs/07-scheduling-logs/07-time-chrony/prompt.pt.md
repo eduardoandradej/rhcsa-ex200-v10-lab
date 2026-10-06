@@ -1,0 +1,1 @@
+No `servera`, configure o fuso `America/Jamaica`, habilite NTP, garanta `chronyd` ativo/habilitado e salve `timedatectl`, `chronyc sources -v` e `chronyc tracking` em `output/timedatectl.txt`, `output/sources.txt` e `output/tracking.txt`. Não altere manualmente a hora. O `lab finish` restaura o fuso original.
