@@ -1,0 +1,1 @@
+Integrated challenge on isolated `ex200a`: create `exam-net` with IPv4 `10.66.8.20/24` plus `10.66.8.120/24`, IPv6 `fd00:66:8::20/64`, manual methods, autoconnect yes, no gateway. Persist hostname `serverb-net.lab.test`, add peer alias to `/etc/hosts`, and save profile/runtime/ping/getent evidence.

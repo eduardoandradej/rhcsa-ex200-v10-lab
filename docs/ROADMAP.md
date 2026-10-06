@@ -8,15 +8,16 @@
 | 02 | Users & Groups | 8 — concluído |
 | 03 | RPM, DNF & Repositories | 8 — concluído |
 | 04 | Simple Shell Scripts | 8 — concluído |
-| 05 | Processes, Scheduling, Tuning & systemd | 10 — implementação v1.1.0 |
+| 05 | Processes, Scheduling, Tuning & systemd | 10 — concluído v1.1.5 |
 
-Total após esta entrega: **44 labs**.
+| 06 | Networking / NetworkManager | 8 — implementação v1.2.0 |
+
+Total após esta entrega: **52 labs**.
 
 ## Próximos blocos
 
 | Objective | Tema | Labs estimados |
 |---|---|---:|
-| 06 | Networking / NetworkManager | 8 |
 | 07 | Scheduling, logs e chrony | 8 |
 | 08 | Storage, swap e LVM | 12 |
 | 09 | Boot, GRUB e recuperação | 7 |

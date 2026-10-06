@@ -1,0 +1,1 @@
+On `servera`, create and activate `ex200-static` on `ex200a` with manual IPv4 `10.66.2.10/24`, IPv6 disabled, autoconnect yes, and no gateway. Save a ping to `10.66.2.254` in `output/ping.txt`.

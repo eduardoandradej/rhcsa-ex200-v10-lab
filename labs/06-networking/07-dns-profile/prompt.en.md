@@ -1,0 +1,1 @@
+Keep isolated `ex200-dns` inactive. Persist DNS `192.0.2.53,192.0.2.54`, search `lab.example`, ignore-auto-dns yes, never-default yes, autoconnect no. Save profile fields and the `hosts:` nsswitch line.

@@ -1,0 +1,1 @@
+Temporarily set hostname `temporary-net` and save evidence, then persistently set `nodea.lab.test`. Add `10.66.6.254 peer06.lab.test peer06` to `/etc/hosts`, save `getent hosts peer06` and ping evidence. Finish restores hostname and hosts.

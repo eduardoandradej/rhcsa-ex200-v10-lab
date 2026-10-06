@@ -1,0 +1,1 @@
+Configure `ex200-dual` on `ex200a` with manual IPv4 `10.66.4.10/24`, manual IPv6 `fd00:66:4::10/64`, autoconnect yes, no gateways. Save IPv4/IPv6 ping evidence.

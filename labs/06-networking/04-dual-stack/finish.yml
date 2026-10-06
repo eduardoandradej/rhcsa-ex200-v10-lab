@@ -1,0 +1,22 @@
+---
+- name: Finish obj06-04
+  hosts: servera
+  gather_facts: false
+  become: true
+  tasks:
+
+    - name: Remove training NetworkManager profiles
+      ansible.builtin.shell: |
+        for uuid in $(nmcli -t -f UUID con show 2>/dev/null); do
+          ifname=$(nmcli -g connection.interface-name con show uuid "$uuid" 2>/dev/null || true)
+          case "$ifname" in
+            ex200a|ex200b) nmcli con delete uuid "$uuid" >/dev/null 2>&1 || true ;;
+          esac
+        done
+      changed_when: false
+
+    - name: Remove training veth pair
+      ansible.builtin.shell: |
+        ip link del ex200a 2>/dev/null || true
+      changed_when: false
+    - ansible.builtin.file: { path: /home/student/rhcsa-lab/obj06-04, state: absent }

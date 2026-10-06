@@ -1,0 +1,14 @@
+---
+id: obj06-02
+title: "Criar perfil IPv4 estático com nmcli"
+title_en: "Create a static IPv4 profile with nmcli"
+objective: "Objective 06 — NetworkManager, IP Networking & Name Resolution"
+target: [servera]
+difficulty: 2
+duration: 20
+compatibility:
+  local: "RHEL 9.8"
+  target: "RHEL 10"
+  level: concept-and-state
+reset_policy: ansible
+status: ready

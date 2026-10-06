@@ -1,0 +1,46 @@
+---
+- name: Prepare obj06-03
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars: { root: /home/student/rhcsa-lab/obj06-03 }
+  tasks:
+    - ansible.builtin.file: { path: "{{ root }}", state: absent }
+    - ansible.builtin.file: { path: "{{ root }}/output", state: directory, owner: student, group: student, mode: "0755" }
+
+    - name: Remove stale training networking state
+      ansible.builtin.shell: |
+        for uuid in $(nmcli -t -f UUID con show 2>/dev/null); do
+          ifname=$(nmcli -g connection.interface-name con show uuid "$uuid" 2>/dev/null || true)
+          case "$ifname" in
+            ex200a|ex200b) nmcli con delete uuid "$uuid" >/dev/null 2>&1 || true ;;
+          esac
+        done
+        ip link del ex200a 2>/dev/null || true
+      changed_when: false
+
+    - name: Create isolated veth pair
+      ansible.builtin.command:
+        argv: [/usr/sbin/ip, link, add, ex200a, type, veth, peer, name, ex200b]
+      changed_when: true
+
+    - name: Bring training interfaces up
+      ansible.builtin.shell: |
+        ip link set ex200a up
+        ip link set ex200b up
+      changed_when: true
+
+    - name: Create peer NetworkManager profile
+      ansible.builtin.shell: |
+        nmcli con add con-name ex200-peer type ethernet ifname ex200b \
+          ipv4.method manual ipv4.addresses 10.66.3.254/24 \
+          ipv6.method disabled connection.autoconnect no
+        nmcli con up ex200-peer
+      changed_when: true
+    - name: Create initial profile
+      ansible.builtin.shell: |
+        nmcli con add con-name ex200-mod type ethernet ifname ex200a \
+          ipv4.method manual ipv4.addresses 10.66.3.10/24 \
+          ipv6.method disabled connection.autoconnect no
+        nmcli con up ex200-mod
+      changed_when: true

@@ -1,0 +1,1 @@
+Active profile `ex200-keyfile` has `10.66.5.10/24`. Directly edit its `.nmconnection` keyfile to add `10.66.5.110/24` as a second persistent address. Do not use `nmcli con mod` for that address. Reload profiles, reactivate, and save runtime evidence.

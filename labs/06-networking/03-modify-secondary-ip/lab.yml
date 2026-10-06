@@ -1,0 +1,14 @@
+---
+id: obj06-03
+title: "Modificar perfil, gateway e IPv4 secundário"
+title_en: "Modify a profile, gateway, and secondary IPv4 address"
+objective: "Objective 06 — NetworkManager, IP Networking & Name Resolution"
+target: [servera]
+difficulty: 2
+duration: 22
+compatibility:
+  local: "RHEL 9.8"
+  target: "RHEL 10"
+  level: concept-and-state
+reset_policy: ansible
+status: ready

@@ -1,0 +1,49 @@
+---
+- name: Prepare obj06-08
+  hosts: serverb
+  gather_facts: false
+  become: true
+  vars:
+    root: /home/student/rhcsa-lab/obj06-08
+    state_dir: /var/lib/rhcsa-lab/obj06-08
+  tasks:
+    - ansible.builtin.file: { path: "{{ root }}", state: absent }
+    - ansible.builtin.file: { path: "{{ root }}/output", state: directory, owner: student, group: student, mode: "0755" }
+    - ansible.builtin.file: { path: "{{ state_dir }}", state: directory, mode: "0700" }
+    - name: Save original static hostname
+      ansible.builtin.command: hostnamectl --static
+      register: original_hostname
+      changed_when: false
+    - ansible.builtin.copy: { dest: "{{ state_dir }}/hostname", content: "{{ original_hostname.stdout | trim }}\n", mode: "0600" }
+    - name: Back up hosts
+      ansible.builtin.copy: { src: /etc/hosts, dest: "{{ state_dir }}/hosts", remote_src: true, mode: "0600" }
+
+    - name: Remove stale training networking state
+      ansible.builtin.shell: |
+        for uuid in $(nmcli -t -f UUID con show 2>/dev/null); do
+          ifname=$(nmcli -g connection.interface-name con show uuid "$uuid" 2>/dev/null || true)
+          case "$ifname" in
+            ex200a|ex200b) nmcli con delete uuid "$uuid" >/dev/null 2>&1 || true ;;
+          esac
+        done
+        ip link del ex200a 2>/dev/null || true
+      changed_when: false
+
+    - name: Create isolated veth pair
+      ansible.builtin.command:
+        argv: [/usr/sbin/ip, link, add, ex200a, type, veth, peer, name, ex200b]
+      changed_when: true
+
+    - name: Bring training interfaces up
+      ansible.builtin.shell: |
+        ip link set ex200a up
+        ip link set ex200b up
+      changed_when: true
+
+    - name: Create peer NetworkManager profile
+      ansible.builtin.shell: |
+        nmcli con add con-name ex200-peer type ethernet ifname ex200b \
+          ipv4.method manual ipv4.addresses 10.66.8.254/24 \
+          ipv6.method manual ipv6.addresses fd00:66:8::fe/64 connection.autoconnect no
+        nmcli con up ex200-peer
+      changed_when: true

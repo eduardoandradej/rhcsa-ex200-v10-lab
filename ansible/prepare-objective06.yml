@@ -1,0 +1,22 @@
+---
+- name: Prepare Objective 06 networking prerequisites
+  hosts: managed
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Ensure networking utilities are present
+      ansible.builtin.dnf:
+        name: [NetworkManager, iproute, iputils, bind-utils]
+        state: present
+    - name: Ensure NetworkManager is running
+      ansible.builtin.systemd:
+        name: NetworkManager
+        state: started
+        enabled: true
+    - name: Verify required commands
+      ansible.builtin.shell: "command -v {{ item }}"
+      loop: [nmcli, ip, ping, hostnamectl, getent]
+      changed_when: false
+    - name: Verify IPv6 is available
+      ansible.builtin.shell: 'test "$(sysctl -n net.ipv6.conf.all.disable_ipv6)" = "0"'
+      changed_when: false

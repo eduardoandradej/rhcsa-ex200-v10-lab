@@ -1,111 +1,58 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
-
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-echo "== Python syntax =="
-python3 -m py_compile labctl/*.py
-find labs -name grade.py -print0 | xargs -0 -r python3 -m py_compile
+echo "== Python syntax (in-memory, no __pycache__) =="
+python3 - <<'PY'
+from pathlib import Path
+for p in sorted(list(Path('labctl').glob('*.py')) + list(Path('labs').glob('*/*/grade.py'))):
+    compile(p.read_text(), str(p), 'exec')
+    print(f'OK {p}')
+PY
 
 echo "== Shell syntax =="
-while IFS= read -r script; do
-    bash -n "$script"
-    echo "OK ${script#"$ROOT"/}"
-done < <(
-    find "$ROOT/tests/reference-solutions" -type f -name '*.sh' | sort
-)
-
-for script in \
-    "$ROOT/tests/integration-reference.sh" \
-    "$ROOT/tests/integration-objective04.sh" \
-    "$ROOT/tests/integration-objective05.sh"
-do
-    [[ -f "$script" ]] || continue
-    bash -n "$script"
-    echo "OK ${script#"$ROOT"/}"
-done
+while IFS= read -r s; do bash -n "$s"; echo "OK ${s#"$ROOT"/}"; done < <(find "$ROOT/tests" -maxdepth 2 -type f -name '*.sh' | sort)
 
 echo "== YAML catalog and ready-lab contract =="
 python3 - <<'PY'
 from pathlib import Path
 import yaml
-
-required = {
-    "id", "title", "objective", "target",
-    "difficulty", "duration", "compatibility"
-}
-ready_files = (
-    "setup.yml", "finish.yml", "grade.py",
-    "prompt.pt.md", "prompt.en.md", "solution.md"
-)
-
-for path in sorted(Path("labs").glob("*/*/lab.yml")):
-    data = yaml.safe_load(path.read_text()) or {}
-    missing = required - set(data)
-
-    if missing:
-        raise SystemExit(f"{path}: missing {sorted(missing)}")
-
-    status = data.get("status", "catalog-only")
-
-    if status == "ready":
-        for name in ready_files:
-            if not (path.parent / name).is_file():
-                raise SystemExit(f"{data['id']}: ready but missing {name}")
-
-    print(f"OK {data['id']}: {status}")
+required={'id','title','objective','target','difficulty','duration','compatibility'}
+ready=('setup.yml','finish.yml','grade.py','prompt.pt.md','prompt.en.md','solution.md')
+for p in sorted(Path('labs').glob('*/*/lab.yml')):
+    d=yaml.safe_load(p.read_text()) or {}; missing=required-set(d)
+    if missing: raise SystemExit(f'{p}: missing {sorted(missing)}')
+    status=d.get('status','catalog-only')
+    if status=='ready':
+        for name in ready:
+            if not (p.parent/name).is_file(): raise SystemExit(f"{d['id']}: ready but missing {name}")
+    print(f"OK {d['id']}: {status}")
 PY
 
 echo "== Grader CLI contract =="
 python3 - <<'PY'
 from pathlib import Path
 import ast
-
-failures = []
-
-for path in sorted(Path("labs").glob("*/*/grade.py")):
-    tree = ast.parse(path.read_text(), filename=str(path))
-    has_json_option = False
-
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
-            if node.func.attr == "add_argument":
-                for arg in node.args:
-                    if isinstance(arg, ast.Constant) and arg.value == "--json":
-                        has_json_option = True
-                        break
-        if has_json_option:
-            break
-
-    if not has_json_option:
-        failures.append(str(path))
-    else:
-        print(f"OK {path.parent.name}/grade.py: --json")
-
-if failures:
-    raise SystemExit(
-        "Graders sem suporte ao contrato --json:\n  "
-        + "\n  ".join(failures)
-    )
+bad=[]
+for p in sorted(Path('labs').glob('*/*/grade.py')):
+    tree=ast.parse(p.read_text(),filename=str(p)); ok=False
+    for n in ast.walk(tree):
+        if isinstance(n,ast.Call) and isinstance(n.func,ast.Attribute) and n.func.attr=='add_argument':
+            if any(isinstance(a,ast.Constant) and a.value=='--json' for a in n.args): ok=True; break
+    if not ok: bad.append(str(p))
+    else: print(f'OK {p.parent.name}/grade.py: --json')
+if bad: raise SystemExit('Graders sem --json:\n  '+'\n  '.join(bad))
 PY
 
 echo "== Ansible syntax =="
 cd "$ROOT/ansible"
-
-for prereq in prepare-objective03.yml prepare-objective05.yml; do
-    if [[ -f "$prereq" ]]; then
-        ansible-playbook --syntax-check "$prereq" >/dev/null
-        echo "OK ansible/$prereq"
-    fi
+for p in prepare-objective*.yml; do
+    [[ -f "$p" ]] || continue
+    ansible-playbook --syntax-check "$p" >/dev/null
+    echo "OK ansible/$p"
 done
-
-while IFS= read -r playbook; do
-    ansible-playbook --syntax-check "$playbook" >/dev/null
-    echo "OK $(basename "$(dirname "$playbook")")/$(basename "$playbook")"
-done < <(
-    find "$ROOT/labs" \( -name setup.yml -o -name finish.yml \) -type f | sort
-)
+while IFS= read -r p; do ansible-playbook --syntax-check "$p" >/dev/null; echo "OK ${p#"$ROOT"/}"; done < <(find "$ROOT/labs" \( -name setup.yml -o -name finish.yml \) -type f | sort)
 
 echo "== CLI smoke =="
 cd "$ROOT"

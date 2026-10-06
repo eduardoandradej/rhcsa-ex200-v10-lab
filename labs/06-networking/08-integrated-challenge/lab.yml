@@ -1,0 +1,14 @@
+---
+id: obj06-08
+title: "Desafio integrado de NetworkManager e resolução"
+title_en: "Integrated NetworkManager and name-resolution challenge"
+objective: "Objective 06 — NetworkManager, IP Networking & Name Resolution"
+target: [serverb]
+difficulty: 4
+duration: 35
+compatibility:
+  local: "RHEL 9.8"
+  target: "RHEL 10"
+  level: concept-and-state
+reset_policy: ansible
+status: ready
