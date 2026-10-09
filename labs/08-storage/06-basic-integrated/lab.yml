@@ -1,0 +1,14 @@
+---
+id: obj08-06
+title: "Desafio integrado de Basic Storage"
+title_en: "Integrated basic storage challenge"
+objective: "Objective 08 — Partitions, Filesystems, Swap & LVM"
+target: [servera]
+difficulty: 4
+duration: 35
+compatibility:
+  local: "RHEL 9.8"
+  target: "RHEL 10"
+  level: concept-and-state
+reset_policy: guarded-storage-reset
+status: ready

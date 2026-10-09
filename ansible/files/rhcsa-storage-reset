@@ -1,0 +1,170 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+[[ "$#" -ge 1 ]] || {
+  echo "usage: rhcsa-storage-reset DEVICE..." >&2
+  exit 2
+}
+
+TIMEOUT_SECONDS=15
+
+die() {
+  echo "STORAGE RESET: FAIL: $*" >&2
+  exit 92
+}
+
+bounded() {
+  local label="$1"
+  shift
+  echo "RESET: $label"
+
+  local rc=0
+  timeout --signal=TERM --kill-after=2s "${TIMEOUT_SECONDS}s" "$@" || rc=$?
+
+  if [[ "$rc" -ne 0 ]]; then
+    echo "RESET: warning: $label returned rc=$rc; continuing recovery" >&2
+  fi
+
+  return 0
+}
+
+for dev in "$@"; do
+  /usr/local/sbin/rhcsa-storage-guard protect "$dev" >/dev/null
+done
+
+echo "RESET: authorized scratch devices: $*"
+
+for mnt in /mnt/rhcsa-xfs /data1 /basicdata /lvdata /lvextend /vgextend /lvfinal; do
+  if findmnt -rn "$mnt" >/dev/null 2>&1; then
+    bounded "unmount $mnt" umount "$mnt"
+    if findmnt -rn "$mnt" >/dev/null 2>&1; then
+      bounded "lazy unmount $mnt" umount -l "$mnt"
+    fi
+  fi
+done
+
+training_swap_labels=(
+  RHCSA08SWAP
+  BASWAP08
+  LVSWAP08
+  FINALSWAP08
+)
+
+is_training_swap_label() {
+  local candidate="$1"
+  local label
+  for label in "${training_swap_labels[@]}"; do
+    [[ "$candidate" == "$label" ]] && return 0
+  done
+  return 1
+}
+
+# swapon may expose an LVM swap as /dev/dm-N instead of the friendly
+# /dev/<vg>/<lv> path. Resolve every active swap to its on-disk label and
+# deactivate only labels reserved by OBJ08. This preserves the original
+# system swap regardless of the device name chosen by userspace/kernel.
+mapfile -t active_swaps < <(
+  swapon --show=NAME --noheadings --raw 2>/dev/null || true
+)
+
+for swapdev in "${active_swaps[@]}"; do
+  [[ -n "$swapdev" ]] || continue
+
+  swaplabel="$(
+    blkid -s LABEL -o value "$swapdev" 2>/dev/null || true
+  )"
+
+  if is_training_swap_label "$swaplabel"; then
+    bounded "swapoff training swap $swapdev ($swaplabel)" swapoff "$swapdev"
+  fi
+done
+
+bounded "udev settle after swap cleanup" udevadm settle --timeout=10
+
+training_lvs=(
+  /dev/rhcsa_vgdata/rhcsa_lvdata
+  /dev/rhcsa_vgextend/rhcsa_base
+  /dev/rhcsa_vgextend/rhcsa_lvextra
+  /dev/rhcsa_vgswap/rhcsa_lvswap
+  /dev/rhcsa_vgfinal/rhcsa_data
+  /dev/rhcsa_vgfinal/rhcsa_swap
+)
+
+training_vgs=(
+  rhcsa_vgdata
+  rhcsa_vgextend
+  rhcsa_vgswap
+  rhcsa_vgfinal
+)
+
+for lv in "${training_lvs[@]}"; do
+  if [[ -e "$lv" ]] || timeout 5s lvs "$lv" >/dev/null 2>&1; then
+    # Mounts and training swaps were already released above. Clear filesystem
+    # or swap signatures while the known training LV still has a stable path,
+    # then deactivate/remove it. This prevents signatures in reused extents
+    # from triggering an interactive lvcreate prompt in the next lab run.
+    bounded "wipe signatures on LV $lv" wipefs -a -f "$lv"
+    bounded "deactivate LV $lv" lvchange -an "$lv"
+    bounded "remove LV $lv" lvremove -fy "$lv"
+  fi
+done
+
+for vg in "${training_vgs[@]}"; do
+  bounded "deactivate VG $vg" vgchange -an "$vg"
+  bounded "remove VG $vg" vgremove -fy "$vg"
+done
+
+if command -v dmsetup >/dev/null 2>&1; then
+  mapfile -t maps < <(dmsetup ls --noheadings 2>/dev/null | awk '{print $1}' | grep '^rhcsa_' || true)
+  for map in "${maps[@]}"; do
+    [[ -n "$map" ]] || continue
+    bounded "remove stale device-mapper mapping $map" dmsetup remove --retry "$map"
+  done
+fi
+
+bounded "udev settle after LVM cleanup" udevadm settle --timeout=10
+
+for dev in "$@"; do
+  echo "RESET: cleaning $dev"
+
+  mapfile -t children < <(lsblk -nrpo NAME,TYPE "$dev" | awk '$2=="part"{print $1}')
+  for child in "${children[@]}"; do
+    bounded "pvremove $child" pvremove -ff -y "$child"
+    bounded "wipe signatures on $child" wipefs -a -f "$child"
+  done
+
+  bounded "wipe disk signatures on $dev" wipefs -a -f "$dev"
+  bounded "delete kernel partitions for $dev" partx -d "$dev"
+  bounded "reread partition table for $dev" blockdev --rereadpt "$dev"
+  bounded "partprobe $dev" partprobe "$dev"
+  bounded "udev settle for $dev" udevadm settle --timeout=10
+
+  cleared=0
+  for _ in $(seq 1 15); do
+    if ! lsblk -nrpo TYPE "$dev" | grep -qx part; then
+      cleared=1
+      break
+    fi
+    timeout 3s partx -d "$dev" >/dev/null 2>&1 || true
+    timeout 3s blockdev --rereadpt "$dev" >/dev/null 2>&1 || true
+    timeout 3s partprobe "$dev" >/dev/null 2>&1 || true
+    sleep 1
+  done
+
+  if [[ "$cleared" -ne 1 ]]; then
+    echo "STORAGE RESET: kernel still reports partitions for $dev" >&2
+    lsblk -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINTS "$dev" >&2 || true
+    echo "=== LVM diagnostic ===" >&2
+    timeout 5s pvs >&2 2>/dev/null || true
+    timeout 5s vgs >&2 2>/dev/null || true
+    timeout 5s lvs -a -o lv_name,vg_name,lv_path,lv_attr >&2 2>/dev/null || true
+    die "could not clear the kernel partition map for $dev within 15 seconds"
+  fi
+
+  /usr/local/sbin/rhcsa-storage-guard blank "$dev" >/dev/null ||
+    die "$dev did not return to the required blank scratch state"
+
+  echo "RESET: $dev is blank"
+done
+
+echo "STORAGE RESET: PASS: $*"

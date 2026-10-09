@@ -1,0 +1,14 @@
+---
+id: obj08-01
+title: "Inventariar dispositivos de bloco"
+title_en: "Inventory block devices"
+objective: "Objective 08 — Partitions, Filesystems, Swap & LVM"
+target: [servera]
+difficulty: 1
+duration: 15
+compatibility:
+  local: "RHEL 9.8"
+  target: "RHEL 10"
+  level: concept-and-state
+reset_policy: guarded-storage-reset
+status: ready

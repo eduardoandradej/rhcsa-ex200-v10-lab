@@ -61,3 +61,9 @@ cd "$ROOT"
 
 echo
 echo "RELEASE GATE: PASS"
+
+# Objective 03 local repository accessibility
+bash tests/release-gate-obj03-repo-access.sh
+
+# Objective 05 non-interactive integration wait
+bash tests/release-gate-obj05-noninteractive-wait.sh

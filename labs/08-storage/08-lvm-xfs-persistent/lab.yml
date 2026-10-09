@@ -1,0 +1,14 @@
+---
+id: obj08-08
+title: "Criar XFS em LV e persistir mount"
+title_en: "Create XFS on LV and persist mount"
+objective: "Objective 08 — Partitions, Filesystems, Swap & LVM"
+target: [servera]
+difficulty: 3
+duration: 25
+compatibility:
+  local: "RHEL 9.8"
+  target: "RHEL 10"
+  level: concept-and-state
+reset_policy: guarded-storage-reset
+status: ready

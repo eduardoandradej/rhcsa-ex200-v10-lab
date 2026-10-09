@@ -1,0 +1,14 @@
+---
+id: obj08-05
+title: "Criar swap persistente em partição"
+title_en: "Create persistent partition swap"
+objective: "Objective 08 — Partitions, Filesystems, Swap & LVM"
+target: [servera]
+difficulty: 3
+duration: 20
+compatibility:
+  local: "RHEL 9.8"
+  target: "RHEL 10"
+  level: concept-and-state
+reset_policy: guarded-storage-reset
+status: ready

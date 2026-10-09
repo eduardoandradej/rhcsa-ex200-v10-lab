@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+mode="${1:-}"
+dev="${2:-}"
+die() { echo "STORAGE GUARD: FAIL: $*" >&2; exit 90; }
+[[ "$(hostname -s)" == "servera" ]] || die "only servera is authorized for OBJ08 destructive storage labs"
+case "$dev" in
+  /dev/vdb) min=$((4*1024**3)); max=$((6*1024**3)) ;;
+  /dev/vdc) min=$((4*1024**3)); max=$((6*1024**3)) ;;
+  /dev/vdd) min=$((2*1024**3)); max=$((4*1024**3)) ;;
+  /dev/vde) min=$((1*1024**3)); max=$((3*1024**3)) ;;
+  /dev/vda|/dev/vda*) die "/dev/vda and its children are permanently protected" ;;
+  *) die "device is not in the OBJ08 allowlist: $dev" ;;
+esac
+[[ -b "$dev" ]] || die "not a block device: $dev"
+[[ "$(lsblk -dn -o TYPE "$dev")" == "disk" ]] || die "authorized target must be a whole disk: $dev"
+bytes="$(blockdev --getsize64 "$dev")"
+(( bytes >= min && bytes <= max )) || die "unexpected size for $dev: $bytes bytes"
+# A scratch disk must never carry a critical system mount.
+while read -r name mnt; do
+  case "$mnt" in
+    /|/boot|/boot/efi) die "$dev unexpectedly backs critical mount $mnt via $name" ;;
+  esac
+done < <(lsblk -nrpo NAME,MOUNTPOINTS "$dev")
+if [[ "$mode" == "protect" ]]; then
+  echo "STORAGE GUARD: PASS: $dev is an authorized scratch disk"
+  exit 0
+fi
+[[ "$mode" == "blank" ]] || die "usage: rhcsa-storage-guard {protect|blank} DEVICE"
+# blank means no child partitions, no signatures, no PV metadata, no active use,
+# and no known OBJ08 mountpoints left in fstab.
+if lsblk -nrpo TYPE "$dev" | grep -qx part; then
+  die "$dev still has partitions"
+fi
+if wipefs -n "$dev" 2>/dev/null | grep -q .; then
+  die "$dev still has a disk signature"
+fi
+if pvs --noheadings -o pv_name 2>/dev/null | awk '{$1=$1};1' | grep -Fxq "$dev"; then
+  die "$dev is still an LVM physical volume"
+fi
+if swapon --show=NAME --noheadings --raw 2>/dev/null | grep -Fq "$dev"; then
+  die "$dev is active swap"
+fi
+if grep -Eq '^[^#].*[[:space:]]/(data1|basicdata|lvdata|lvextend|vgextend|lvfinal)[[:space:]]' /etc/fstab; then
+  die "OBJ08 training mountpoint is still present in /etc/fstab"
+fi
+echo "STORAGE GUARD: PASS: $dev is blank and authorized"

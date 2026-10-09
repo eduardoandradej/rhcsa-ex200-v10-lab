@@ -152,5 +152,9 @@
         group: root
         mode: "0644"
 
-    - ansible.builtin.pause:
-        seconds: 2
+    - name: Allow process metrics to accumulate
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/sleep
+          - "2"
+      changed_when: false

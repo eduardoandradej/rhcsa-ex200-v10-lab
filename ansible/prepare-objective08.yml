@@ -1,0 +1,47 @@
+---
+- name: Prepare Objective 08 storage prerequisites and safety controls
+  hosts: servera
+  gather_facts: false
+  become: true
+
+  tasks:
+    - name: Ensure storage administration packages are installed
+      ansible.builtin.dnf:
+        name:
+          - parted
+          - lvm2
+          - xfsprogs
+          - e2fsprogs
+          - util-linux
+        state: present
+
+    - name: Install guarded storage allowlist
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/files/rhcsa-storage-guard"
+        dest: /usr/local/sbin/rhcsa-storage-guard
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Install guarded storage reset utility
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/files/rhcsa-storage-reset"
+        dest: /usr/local/sbin/rhcsa-storage-reset
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Prove system disk is protected
+      ansible.builtin.command: /usr/local/sbin/rhcsa-storage-guard protect /dev/vda
+      register: protected_disk_test
+      failed_when: protected_disk_test.rc == 0
+      changed_when: false
+
+    - name: Validate scratch disk identity and size
+      ansible.builtin.command: "/usr/local/sbin/rhcsa-storage-guard protect {{ item }}"
+      loop:
+        - /dev/vdb
+        - /dev/vdc
+        - /dev/vdd
+        - /dev/vde
+      changed_when: false

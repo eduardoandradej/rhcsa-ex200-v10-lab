@@ -1,0 +1,35 @@
+---
+- name: Prepare obj08-01
+  hosts: servera
+  gather_facts: false
+  become: true
+  tasks:
+
+    - name: Install OBJ08 storage guard
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../../../ansible/files/rhcsa-storage-guard"
+        dest: /usr/local/sbin/rhcsa-storage-guard
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Install OBJ08 storage reset utility
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../../../ansible/files/rhcsa-storage-reset"
+        dest: /usr/local/sbin/rhcsa-storage-reset
+        owner: root
+        group: root
+        mode: "0755"
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj08-01
+        state: absent
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj08-01/output
+        state: directory
+        owner: student
+        group: student
+        mode: "0755"
+    - name: Validate scratch identities without requiring blank state
+      ansible.builtin.command: "/usr/local/sbin/rhcsa-storage-guard protect {{ item }}"
+      loop: [/dev/vdb, /dev/vdc, /dev/vdd, /dev/vde]
+      changed_when: false

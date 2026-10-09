@@ -62,5 +62,8 @@
         mode: "0644"
 
     - name: Allow metrics to accumulate
-      ansible.builtin.pause:
-        seconds: 2
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/sleep
+          - "2"
+      changed_when: false

@@ -9,6 +9,14 @@
     build_root: /var/tmp/rhcsa-obj03-rpmbuild
 
   tasks:
+    - name: Ensure shared lab root is traversable for local repositories
+      ansible.builtin.file:
+        path: /var/lib/rhcsa-lab
+        state: directory
+        owner: root
+        group: root
+        mode: "0711"
+
     - name: Ensure Objective 03 infrastructure packages are installed
       ansible.builtin.dnf:
         name:
@@ -174,6 +182,24 @@
       ansible.builtin.stat:
         path: "{{ obj03_root }}/repos/errata/repodata/repomd.xml"
       register: errata_repo_metadata
+
+    - name: Verify base repository metadata is readable by student
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/test
+          - -r
+          - "{{ obj03_root }}/repos/base/repodata/repomd.xml"
+      become_user: student
+      changed_when: false
+
+    - name: Verify errata repository metadata is readable by student
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/test
+          - -r
+          - "{{ obj03_root }}/repos/errata/repodata/repomd.xml"
+      become_user: student
+      changed_when: false
 
     - name: Assert deterministic repositories are ready
       ansible.builtin.assert:

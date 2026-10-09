@@ -1,0 +1,14 @@
+---
+id: obj08-12
+title: "Desafio integrado de Storage e LVM"
+title_en: "Integrated storage and LVM challenge"
+objective: "Objective 08 — Partitions, Filesystems, Swap & LVM"
+target: [servera]
+difficulty: 5
+duration: 45
+compatibility:
+  local: "RHEL 9.8"
+  target: "RHEL 10"
+  level: concept-and-state
+reset_policy: guarded-storage-reset
+status: ready

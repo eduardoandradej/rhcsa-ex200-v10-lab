@@ -1,0 +1,115 @@
+---
+- name: Prepare obj08-10
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    lab_root: /home/student/rhcsa-lab/obj08-10
+    state_dir: /var/lib/rhcsa-lab/obj08-10
+  tasks:
+
+    - name: Install OBJ08 storage guard
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../../../ansible/files/rhcsa-storage-guard"
+        dest: /usr/local/sbin/rhcsa-storage-guard
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Install OBJ08 storage reset utility
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../../../ansible/files/rhcsa-storage-reset"
+        dest: /usr/local/sbin/rhcsa-storage-reset
+        owner: root
+        group: root
+        mode: "0755"
+    - ansible.builtin.file:
+        path: "{{ lab_root }}"
+        state: absent
+
+    - ansible.builtin.file:
+        path: "{{ lab_root }}/output"
+        state: directory
+        owner: student
+        group: student
+        mode: "0755"
+
+    - ansible.builtin.file:
+        path: "{{ state_dir }}"
+        state: directory
+        mode: "0700"
+
+    - name: Safety guard /dev/vdc
+      ansible.builtin.command: /usr/local/sbin/rhcsa-storage-guard blank /dev/vdc
+      changed_when: false
+    - name: Safety guard /dev/vdd
+      ansible.builtin.command: /usr/local/sbin/rhcsa-storage-guard blank /dev/vdd
+      changed_when: false
+
+    - name: Save fstab baseline
+      ansible.builtin.copy:
+        src: /etc/fstab
+        dest: "{{ state_dir }}/fstab"
+        remote_src: true
+        mode: "0600"
+
+    - name: Create GPT and initial LVM partition on vdc
+      ansible.builtin.shell: |
+        set -Eeuo pipefail
+        timeout --signal=TERM --kill-after=2s 30s parted -s /dev/vdc mklabel gpt
+        timeout --signal=TERM --kill-after=2s 30s parted -s /dev/vdc mkpart pv1 1MiB 3073MiB
+        timeout --signal=TERM --kill-after=2s 30s parted -s /dev/vdc set 1 lvm on
+        timeout --signal=TERM --kill-after=2s 30s partprobe /dev/vdc
+      args:
+        executable: /bin/bash
+      changed_when: true
+
+    - name: Wait for vdc1 device node
+      ansible.builtin.wait_for:
+        path: /dev/vdc1
+        state: present
+        timeout: 15
+
+    - name: Create initial PV
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/timeout
+          - --signal=TERM
+          - --kill-after=2s
+          - 30s
+          - "pvcreate"
+          - "-ff"
+          - "-y"
+          - "/dev/vdc1"
+      changed_when: true
+
+    - name: Create rhcsa_vgextend VG
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/timeout
+          - --signal=TERM
+          - --kill-after=2s
+          - 30s
+          - "vgcreate"
+          - "rhcsa_vgextend"
+          - "/dev/vdc1"
+      changed_when: true
+
+    - name: Create base LV
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/timeout
+          - --signal=TERM
+          - --kill-after=2s
+          - 30s
+          - "lvcreate"
+          - "--yes"
+          - "--wipesignatures"
+          - "y"
+          - "-L"
+          - "1G"
+          - "-n"
+          - "rhcsa_base"
+          - "rhcsa_vgextend"
+      changed_when: true
+

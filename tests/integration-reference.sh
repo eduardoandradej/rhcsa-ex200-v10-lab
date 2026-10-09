@@ -4,7 +4,7 @@ ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 if [[ "$#" -eq 0 ]]; then
   echo "===== Full regression prerequisites ====="
-  ( cd "$ROOT/ansible"; for p in prepare-objective03.yml prepare-objective05.yml prepare-objective06.yml prepare-objective07.yml; do [[ -f "$p" ]] && ansible-playbook "$p"; done )
+  ( cd "$ROOT/ansible"; for p in prepare-objective03.yml prepare-objective05.yml prepare-objective06.yml prepare-objective07.yml prepare-objective08.yml; do [[ -f "$p" ]] && ansible-playbook "$p"; done )
   LABS=(
     obj01-01 obj01-02 obj01-03 obj01-04 obj01-05 obj01-06 obj01-07 obj01-08 obj01-09 obj01-10
     obj02-01 obj02-02 obj02-03 obj02-04 obj02-05 obj02-06 obj02-07 obj02-08
@@ -12,8 +12,18 @@ if [[ "$#" -eq 0 ]]; then
     obj04-01 obj04-02 obj04-03 obj04-04 obj04-05 obj04-06 obj04-07 obj04-08
     obj05-01 obj05-02 obj05-03 obj05-04 obj05-05 obj05-06 obj05-07 obj05-08 obj05-09 obj05-10
     obj06-01 obj06-02 obj06-03 obj06-04 obj06-05 obj06-06 obj06-07 obj06-08
-    obj07-01 obj07-02 obj07-03 obj07-04 obj07-05 obj07-06 obj07-07 obj07-08 )
-else LABS=("$@"); fi
+    obj07-01 obj07-02 obj07-03 obj07-04 obj07-05 obj07-06 obj07-07 obj07-08
+    obj08-01 obj08-02 obj08-03 obj08-04 obj08-05 obj08-06 obj08-07 obj08-08 obj08-09 obj08-10 obj08-11 obj08-12 )
+else
+  LABS=("$@")
+  if printf '%s\n' "${LABS[@]}" | grep -q '^obj08-'; then
+    echo "===== Objective 08 prerequisites ====="
+    (
+      cd "$ROOT/ansible"
+      ansible-playbook prepare-objective08.yml
+    )
+  fi
+fi
 cleanup_active(){ if [[ -f "$ROOT/.state/active.json" ]]; then "$ROOT/bin/lab" finish >/dev/null 2>&1 || true; fi; }
 trap cleanup_active EXIT
 fail_step(){ local id="$1" step="$2" rc="$3"; echo "REFERENCE TEST: FAIL ($id)"; echo "Etapa que falhou: $step (rc=$rc)"; exit "$rc"; }

@@ -1,0 +1,64 @@
+---
+- name: Prepare obj08-03
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    lab_root: /home/student/rhcsa-lab/obj08-03
+    state_dir: /var/lib/rhcsa-lab/obj08-03
+  tasks:
+
+    - name: Install OBJ08 storage guard
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../../../ansible/files/rhcsa-storage-guard"
+        dest: /usr/local/sbin/rhcsa-storage-guard
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Install OBJ08 storage reset utility
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../../../ansible/files/rhcsa-storage-reset"
+        dest: /usr/local/sbin/rhcsa-storage-reset
+        owner: root
+        group: root
+        mode: "0755"
+    - ansible.builtin.file:
+        path: "{{ lab_root }}"
+        state: absent
+
+    - ansible.builtin.file:
+        path: "{{ lab_root }}/output"
+        state: directory
+        owner: student
+        group: student
+        mode: "0755"
+
+    - ansible.builtin.file:
+        path: "{{ state_dir }}"
+        state: directory
+        mode: "0700"
+
+    - name: Safety guard /dev/vdb
+      ansible.builtin.command: /usr/local/sbin/rhcsa-storage-guard blank /dev/vdb
+      changed_when: false
+
+    - name: Save fstab baseline
+      ansible.builtin.copy:
+        src: /etc/fstab
+        dest: "{{ state_dir }}/fstab"
+        remote_src: true
+        mode: "0600"
+
+    - name: Create prepared GPT partition
+      ansible.builtin.shell: |
+        parted -s /dev/vdb mklabel gpt
+        parted -s /dev/vdb mkpart xfs08 xfs 1MiB 1537MiB
+        udevadm settle --timeout=15
+      changed_when: true
+
+    - ansible.builtin.file:
+        path: /mnt/rhcsa-xfs
+        state: directory
+        mode: "0755"
+

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+import signal
 import subprocess
 
 from .common import ansible_dir, project_root
@@ -15,16 +16,52 @@ def _run(
     timeout: int = 120,
     env: dict | None = None,
 ) -> subprocess.CompletedProcess:
-    return subprocess.run(
+    proc = subprocess.Popen(
         args,
         cwd=str(cwd) if cwd else None,
         text=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        timeout=timeout,
-        check=False,
         env=env,
+        start_new_session=True,
     )
+
+    try:
+        stdout, stderr = proc.communicate(timeout=timeout)
+        return subprocess.CompletedProcess(
+            args=args,
+            returncode=proc.returncode,
+            stdout=stdout or "",
+            stderr=stderr or "",
+        )
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(proc.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+
+        try:
+            stdout, stderr = proc.communicate(timeout=5)
+        except subprocess.TimeoutExpired:
+            try:
+                os.killpg(proc.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            stdout, stderr = proc.communicate()
+
+        message = (
+            f"command timed out after {timeout} seconds; "
+            "local process group terminated"
+        )
+        stderr = (stderr or "").rstrip()
+        stderr = f"{stderr}\n{message}" if stderr else message
+
+        return subprocess.CompletedProcess(
+            args=args,
+            returncode=124,
+            stdout=stdout or "",
+            stderr=stderr,
+        )
 
 
 def run_playbook(path: Path) -> subprocess.CompletedProcess:
@@ -46,22 +83,18 @@ def run_grader(path: Path) -> tuple[int, dict]:
         env=env,
     )
 
-    # A valid grader is allowed to return 0 (PASS) or 1 (INCOMPLETE),
-    # but in both cases it must emit a JSON payload.
+    if proc.returncode not in (0, 1):
+        raise RuntimeError(
+            proc.stderr.strip()
+            or proc.stdout.strip()
+            or "grader terminou com erro"
+        )
+
     try:
         payload = json.loads(proc.stdout)
     except json.JSONDecodeError as exc:
-        detail = (
-            proc.stderr.strip()
-            or proc.stdout.strip()
-            or f"grader terminou com rc={proc.returncode} sem saída JSON"
-        )
         raise RuntimeError(
-            "grader falhou antes de retornar JSON:\n" + detail
+            f"grader retornou saída JSON inválida: {exc}"
         ) from exc
-
-    if proc.returncode not in (0, 1):
-        detail = proc.stderr.strip() or f"grader terminou com rc={proc.returncode}"
-        raise RuntimeError(detail)
 
     return proc.returncode, payload

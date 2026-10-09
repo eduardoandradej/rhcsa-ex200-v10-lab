@@ -1,0 +1,66 @@
+---
+- name: Prepare obj08-11
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    lab_root: /home/student/rhcsa-lab/obj08-11
+    state_dir: /var/lib/rhcsa-lab/obj08-11
+  tasks:
+
+    - name: Install OBJ08 storage guard
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../../../ansible/files/rhcsa-storage-guard"
+        dest: /usr/local/sbin/rhcsa-storage-guard
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Install OBJ08 storage reset utility
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../../../ansible/files/rhcsa-storage-reset"
+        dest: /usr/local/sbin/rhcsa-storage-reset
+        owner: root
+        group: root
+        mode: "0755"
+    - ansible.builtin.file:
+        path: "{{ lab_root }}"
+        state: absent
+
+    - ansible.builtin.file:
+        path: "{{ lab_root }}/output"
+        state: directory
+        owner: student
+        group: student
+        mode: "0755"
+
+    - ansible.builtin.file:
+        path: "{{ state_dir }}"
+        state: directory
+        mode: "0700"
+
+    - name: Safety guard /dev/vde
+      ansible.builtin.command: /usr/local/sbin/rhcsa-storage-guard blank /dev/vde
+      changed_when: false
+
+    - name: Save fstab baseline
+      ansible.builtin.copy:
+        src: /etc/fstab
+        dest: "{{ state_dir }}/fstab"
+        remote_src: true
+        mode: "0600"
+
+
+    - name: Save active swap UUID baseline
+      ansible.builtin.shell: |
+        set -Eeuo pipefail
+        : > "{{ state_dir }}/swap-uuids.before"
+        while IFS= read -r dev; do
+          [[ -n "$dev" ]] || continue
+          blkid -s UUID -o value "$dev" >> "{{ state_dir }}/swap-uuids.before"
+        done < <(swapon --show=NAME --noheadings --raw)
+        sort -u -o "{{ state_dir }}/swap-uuids.before" "{{ state_dir }}/swap-uuids.before"
+      args:
+        executable: /bin/bash
+      changed_when: false
+

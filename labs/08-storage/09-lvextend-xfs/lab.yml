@@ -1,0 +1,14 @@
+---
+id: obj08-09
+title: "Estender LV e filesystem XFS"
+title_en: "Extend an LV and XFS filesystem"
+objective: "Objective 08 — Partitions, Filesystems, Swap & LVM"
+target: [servera]
+difficulty: 3
+duration: 24
+compatibility:
+  local: "RHEL 9.8"
+  target: "RHEL 10"
+  level: concept-and-state
+reset_policy: guarded-storage-reset
+status: ready
