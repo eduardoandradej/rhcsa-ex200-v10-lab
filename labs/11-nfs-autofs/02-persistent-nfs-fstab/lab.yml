@@ -1,0 +1,14 @@
+---
+id: obj11-02
+title: "Montagem NFS persistente no fstab"
+title_en: "Persistent NFS mount in fstab"
+objective: "Objective 11 — NFS & AutoFS"
+target: [servera]
+difficulty: 3
+duration: 24
+compatibility:
+  local: "RHEL 9.8"
+  target: "RHEL 10"
+  level: concept-and-state
+reset_policy: ansible
+status: ready

@@ -1,0 +1,32 @@
+---
+- name: Prepare obj12-01 core administration challenge
+  hosts: servera
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Remove stale training user
+      ansible.builtin.command:
+        argv: [userdel, -r, analyst12]
+      failed_when: false
+      changed_when: false
+
+    - name: Remove stale training group
+      ansible.builtin.command:
+        argv: [groupdel, ops12]
+      failed_when: false
+      changed_when: false
+
+    - ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /srv/team12
+        - /usr/local/bin/count-team12
+        - /home/student/rhcsa-lab/obj12-01
+
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj12-01/output
+        state: directory
+        owner: student
+        group: student
+        mode: "0755"

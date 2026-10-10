@@ -1,0 +1,56 @@
+---
+- name: Prepare obj10-07 SELinux port labeling
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    state_dir: /var/lib/rhcsa-lab/obj10-07
+    training_port: "48888"
+  tasks:
+    - ansible.builtin.file:
+        path: "{{ state_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0700"
+
+    - ansible.builtin.shell: |
+        systemctl is-active httpd > "{{ state_dir }}/httpd-active" || true
+      changed_when: false
+
+    - name: Ensure training port is not already customized
+      ansible.builtin.command:
+        argv: [semanage, port, -d, -t, http_port_t, -p, tcp, "{{ training_port }}"]
+      failed_when: false
+      changed_when: false
+
+    - name: Refuse to repurpose a policy-defined port
+      ansible.builtin.shell: |
+        if semanage port -l | grep -Eq '(^|[[:space:],]){{ training_port }}([[:space:],-]|$)'; then
+          echo "port {{ training_port }} already appears in SELinux policy"
+          exit 1
+        fi
+      changed_when: false
+
+    - ansible.builtin.copy:
+        dest: /etc/httpd/conf.d/rhcsa10-port.conf
+        content: |
+          Listen {{ training_port }}
+        owner: root
+        group: root
+        mode: "0644"
+
+    - ansible.builtin.service:
+        name: httpd
+        state: stopped
+
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj10-07
+        state: absent
+
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj10-07/output
+        state: directory
+        owner: student
+        group: student
+        mode: "0755"

@@ -1,0 +1,51 @@
+---
+- name: Finish obj12-03
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    state_dir: /var/lib/rhcsa-lab/obj12-03
+  tasks:
+    - name: Deactivate challenge mounts and swap
+      ansible.builtin.shell: |
+        set +e
+        umount /srv/data12 >/dev/null 2>&1
+        for dev in $(awk 'NR>1{print $1}' /proc/swaps); do
+          real="$(readlink -f "$dev" 2>/dev/null || echo "$dev")"
+          target="$(readlink -f /dev/vg12/lvswap 2>/dev/null || true)"
+          if test -n "$target" && test "$real" = "$target"; then
+            swapoff "$dev" >/dev/null 2>&1 || true
+          fi
+        done
+        vgremove -ff -y vg12 >/dev/null 2>&1 || true
+        exit 0
+      args:
+        executable: /bin/bash
+      changed_when: false
+
+    - name: Restore fstab baseline
+      ansible.builtin.copy:
+        src: "{{ state_dir }}/fstab"
+        dest: /etc/fstab
+        remote_src: true
+        owner: root
+        group: root
+        mode: "0644"
+      failed_when: false
+
+    - ansible.builtin.command:
+        argv: [systemctl, daemon-reload]
+      changed_when: false
+
+    - name: Reset only the authorized scratch disk
+      ansible.builtin.command:
+        argv: [/usr/local/sbin/rhcsa-storage-reset, /dev/vdb]
+      changed_when: true
+
+    - ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /srv/data12
+        - /home/student/rhcsa-lab/obj12-03
+        - "{{ state_dir }}"

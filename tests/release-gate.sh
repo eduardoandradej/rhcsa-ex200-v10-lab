@@ -73,3 +73,12 @@ bash tests/release-gate-obj09-scope.sh
 
 # Objective 08 GPT partition grader portability
 bash tests/release-gate-obj08-partition-grader.sh
+
+# Objective 10 SELinux/firewalld safety and coverage
+bash tests/release-gate-obj10-security.sh
+
+# Objective 11 NFS/AutoFS safety and coverage
+bash tests/release-gate-obj11-nfs-autofs.sh
+
+# Objective 12 comprehensive final challenges
+bash tests/release-gate-obj12-comprehensive.sh

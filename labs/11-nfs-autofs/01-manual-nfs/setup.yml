@@ -1,0 +1,32 @@
+---
+- name: Prepare obj11-01 manual NFS
+  hosts: servera
+  gather_facts: false
+  become: true
+  tasks:
+    - ansible.builtin.command:
+        argv: [umount, /mnt/rhcsa11-manual]
+      failed_when: false
+      changed_when: false
+
+    - ansible.builtin.file:
+        path: /mnt/rhcsa11-manual
+        state: absent
+
+    - ansible.builtin.file:
+        path: /mnt/rhcsa11-manual
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj11-01
+        state: absent
+
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj11-01/output
+        state: directory
+        owner: student
+        group: student
+        mode: "0755"

@@ -1,0 +1,14 @@
+---
+id: obj11-05
+title: "Automount NFS via systemd e fstab"
+title_en: "NFS automount with systemd and fstab"
+objective: "Objective 11 — NFS & AutoFS"
+target: [servera]
+difficulty: 4
+duration: 30
+compatibility:
+  local: "RHEL 9.8"
+  target: "RHEL 10"
+  level: concept-and-state
+reset_policy: ansible
+status: ready

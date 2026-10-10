@@ -1,0 +1,14 @@
+---
+id: obj10-02
+title: "Restaurar SELinux enforcing atual e persistente"
+title_en: "Restore current and persistent SELinux enforcing mode"
+objective: "Objective 10 — SELinux & firewalld"
+target: [servera]
+difficulty: 3
+duration: 20
+compatibility:
+  local: "RHEL 9.8"
+  target: "RHEL 10"
+  level: exact
+reset_policy: ansible
+status: ready

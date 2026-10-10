@@ -1,0 +1,14 @@
+---
+id: obj10-07
+title: "Rotular porta não padrão para httpd"
+title_en: "Label a nonstandard HTTP port with SELinux"
+objective: "Objective 10 — SELinux & firewalld"
+target: [servera]
+difficulty: 4
+duration: 28
+compatibility:
+  local: "RHEL 9.8"
+  target: "RHEL 10"
+  level: exact
+reset_policy: ansible
+status: ready

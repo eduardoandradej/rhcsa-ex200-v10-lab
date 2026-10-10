@@ -1,0 +1,37 @@
+---
+- name: Finish obj11-05
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    state_dir: /var/lib/rhcsa-lab/obj11-05
+  tasks:
+    - name: Stop mount and automount units
+      ansible.builtin.shell: |
+        set +e
+        unit="$(systemd-escape --path /mnt/rhcsa11-auto)"
+        systemctl stop "${unit}.mount" "${unit}.automount" >/dev/null 2>&1
+        umount /mnt/rhcsa11-auto >/dev/null 2>&1
+        exit 0
+      changed_when: false
+
+    - ansible.builtin.copy:
+        src: "{{ state_dir }}/fstab"
+        dest: /etc/fstab
+        remote_src: true
+        owner: root
+        group: root
+        mode: "0644"
+      failed_when: false
+
+    - ansible.builtin.command:
+        argv: [systemctl, daemon-reload]
+      changed_when: false
+
+    - ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /mnt/rhcsa11-auto
+        - /home/student/rhcsa-lab/obj11-05
+        - "{{ state_dir }}"

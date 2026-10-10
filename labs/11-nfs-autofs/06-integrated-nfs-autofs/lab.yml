@@ -1,0 +1,14 @@
+---
+id: obj11-06
+title: "Desafio integrado NFS e AutoFS"
+title_en: "Integrated NFS and AutoFS challenge"
+objective: "Objective 11 — NFS & AutoFS"
+target: [servera]
+difficulty: 5
+duration: 40
+compatibility:
+  local: "RHEL 9.8"
+  target: "RHEL 10"
+  level: concept-and-state
+reset_policy: ansible
+status: ready

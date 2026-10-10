@@ -1,0 +1,17 @@
+---
+- name: Finish obj11-01
+  hosts: servera
+  gather_facts: false
+  become: true
+  tasks:
+    - ansible.builtin.command:
+        argv: [umount, /mnt/rhcsa11-manual]
+      failed_when: false
+      changed_when: false
+
+    - ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /mnt/rhcsa11-manual
+        - /home/student/rhcsa-lab/obj11-01

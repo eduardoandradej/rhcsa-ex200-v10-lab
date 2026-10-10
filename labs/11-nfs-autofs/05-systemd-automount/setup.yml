@@ -1,0 +1,49 @@
+---
+- name: Prepare obj11-05 systemd automount
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    state_dir: /var/lib/rhcsa-lab/obj11-05
+  tasks:
+    - ansible.builtin.file:
+        path: "{{ state_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0700"
+
+    - ansible.builtin.copy:
+        src: /etc/fstab
+        dest: "{{ state_dir }}/fstab"
+        remote_src: true
+        owner: root
+        group: root
+        mode: "0600"
+
+    - name: Stop stale mount and automount units
+      ansible.builtin.shell: |
+        set +e
+        unit="$(systemd-escape --path /mnt/rhcsa11-auto)"
+        systemctl stop "${unit}.mount" "${unit}.automount" >/dev/null 2>&1
+        umount /mnt/rhcsa11-auto >/dev/null 2>&1
+        exit 0
+      changed_when: false
+
+    - ansible.builtin.file:
+        path: /mnt/rhcsa11-auto
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj11-05
+        state: absent
+
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj11-05/output
+        state: directory
+        owner: student
+        group: student
+        mode: "0755"

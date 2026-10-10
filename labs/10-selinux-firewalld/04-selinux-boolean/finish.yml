@@ -1,0 +1,28 @@
+---
+- name: Finish obj10-04
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    state_dir: /var/lib/rhcsa-lab/obj10-04
+    boolean_name: httpd_enable_homedirs
+  tasks:
+    - name: Restore original Boolean values
+      ansible.builtin.shell: |
+        set -Eeuo pipefail
+        if test -s "{{ state_dir }}/boolean-state"; then
+          read -r current persistent < "{{ state_dir }}/boolean-state"
+          setsebool -P "{{ boolean_name }}" "$persistent"
+          setsebool "{{ boolean_name }}" "$current"
+        fi
+      args:
+        executable: /bin/bash
+      changed_when: true
+      failed_when: false
+
+    - ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /home/student/rhcsa-lab/obj10-04
+        - "{{ state_dir }}"

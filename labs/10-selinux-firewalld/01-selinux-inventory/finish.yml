@@ -1,0 +1,9 @@
+---
+- name: Finish obj10-01
+  hosts: servera
+  gather_facts: false
+  become: true
+  tasks:
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj10-01
+        state: absent

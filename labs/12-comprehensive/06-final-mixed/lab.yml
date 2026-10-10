@@ -1,0 +1,14 @@
+---
+id: obj12-06
+title: "Simulado final integrado"
+title_en: "Final integrated mock challenge"
+objective: "Objective 12 — Comprehensive EX200 Challenges"
+target: [servera]
+difficulty: 5
+duration: 45
+compatibility:
+  local: "RHEL 9.8"
+  target: "RHEL 10"
+  level: concept-and-state
+reset_policy: ansible
+status: ready

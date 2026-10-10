@@ -1,0 +1,51 @@
+---
+- name: Prepare obj10-08 active zone firewall
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    state_dir: /var/lib/rhcsa-lab/obj10-08
+    training_port: 45102/tcp
+  tasks:
+    - ansible.builtin.file:
+        path: "{{ state_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0700"
+
+    - name: Determine active interface and zone
+      ansible.builtin.shell: |
+        set -Eeuo pipefail
+        iface="$(ip -o route show default | awk '{print $5; exit}')"
+        zone="$(firewall-cmd --get-zone-of-interface="$iface")"
+        if test -z "$zone" || test "$zone" = "no zone"; then
+          zone="$(firewall-cmd --get-default-zone)"
+        fi
+        printf '%s\n' "$iface" > "{{ state_dir }}/iface"
+        printf '%s\n' "$zone" > "{{ state_dir }}/zone"
+      args:
+        executable: /bin/bash
+      changed_when: false
+
+    - name: Remove training port from runtime and permanent state
+      ansible.builtin.shell: |
+        set -Eeuo pipefail
+        zone="$(cat "{{ state_dir }}/zone")"
+        firewall-cmd --zone="$zone" --remove-port={{ training_port }} >/dev/null 2>&1 || true
+        firewall-cmd --permanent --zone="$zone" --remove-port={{ training_port }} >/dev/null 2>&1 || true
+        firewall-cmd --reload
+      args:
+        executable: /bin/bash
+      changed_when: true
+
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj10-08
+        state: absent
+
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj10-08/output
+        state: directory
+        owner: student
+        group: student
+        mode: "0755"

@@ -4,7 +4,7 @@ ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 if [[ "$#" -eq 0 ]]; then
   echo "===== Full regression prerequisites ====="
-  ( cd "$ROOT/ansible"; for p in prepare-objective03.yml prepare-objective05.yml prepare-objective06.yml prepare-objective07.yml prepare-objective08.yml prepare-objective09.yml; do [[ -f "$p" ]] && ansible-playbook "$p"; done )
+  ( cd "$ROOT/ansible"; for p in prepare-objective03.yml prepare-objective05.yml prepare-objective06.yml prepare-objective07.yml prepare-objective08.yml prepare-objective09.yml prepare-objective10.yml prepare-objective11.yml prepare-objective12.yml; do [[ -f "$p" ]] && ansible-playbook "$p"; done )
   LABS=(
     obj01-01 obj01-02 obj01-03 obj01-04 obj01-05 obj01-06 obj01-07 obj01-08 obj01-09 obj01-10
     obj02-01 obj02-02 obj02-03 obj02-04 obj02-05 obj02-06 obj02-07 obj02-08
@@ -14,7 +14,10 @@ if [[ "$#" -eq 0 ]]; then
     obj06-01 obj06-02 obj06-03 obj06-04 obj06-05 obj06-06 obj06-07 obj06-08
     obj07-01 obj07-02 obj07-03 obj07-04 obj07-05 obj07-06 obj07-07 obj07-08
     obj08-01 obj08-02 obj08-03 obj08-04 obj08-05 obj08-06 obj08-07 obj08-08 obj08-09 obj08-10 obj08-11 obj08-12
-    obj09-01 obj09-02 obj09-03 obj09-05 obj09-07 )
+    obj09-01 obj09-02 obj09-03 obj09-05 obj09-07
+    obj10-01 obj10-02 obj10-03 obj10-04 obj10-05 obj10-06 obj10-07 obj10-08 obj10-09
+    obj11-01 obj11-02 obj11-03 obj11-04 obj11-05 obj11-06
+    obj12-01 obj12-02 obj12-03 obj12-04 obj12-05 obj12-06 )
 else
   LABS=("$@")
   if printf '%s\n' "${LABS[@]}" | grep -q '^obj08-'; then
@@ -29,6 +32,30 @@ else
     (
       cd "$ROOT/ansible"
       ansible-playbook prepare-objective09.yml
+    )
+  fi
+  if printf '%s\n' "${LABS[@]}" | grep -q '^obj10-'; then
+    echo "===== Objective 10 prerequisites ====="
+    (
+      cd "$ROOT/ansible"
+      ansible-playbook prepare-objective10.yml
+    )
+  fi
+  if printf '%s\n' "${LABS[@]}" | grep -q '^obj11-'; then
+    echo "===== Objective 11 prerequisites ====="
+    (
+      cd "$ROOT/ansible"
+      ansible-playbook prepare-objective11.yml
+    )
+  fi
+  if printf '%s\n' "${LABS[@]}" | grep -q '^obj12-'; then
+    echo "===== Objective 12 prerequisites ====="
+    (
+      cd "$ROOT/ansible"
+      ansible-playbook prepare-objective08.yml
+      ansible-playbook prepare-objective10.yml
+      ansible-playbook prepare-objective11.yml
+      ansible-playbook prepare-objective12.yml
     )
   fi
 fi

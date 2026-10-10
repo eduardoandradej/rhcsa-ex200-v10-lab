@@ -1,0 +1,46 @@
+---
+- name: Finish obj10-02
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    state_dir: /var/lib/rhcsa-lab/obj10-02
+  tasks:
+    - name: Restore SELinux configuration
+      ansible.builtin.copy:
+        src: "{{ state_dir }}/config"
+        dest: /etc/selinux/config
+        remote_src: true
+        owner: root
+        group: root
+        mode: "0644"
+      failed_when: false
+
+    - name: Read original current mode
+      ansible.builtin.slurp:
+        src: "{{ state_dir }}/current-mode"
+      register: original_mode
+      failed_when: false
+
+    - name: Restore current enforcing mode
+      ansible.builtin.command:
+        argv: [setenforce, "1"]
+      when:
+        - original_mode.content is defined
+        - (original_mode.content | b64decode | trim) == "Enforcing"
+      changed_when: true
+
+    - name: Restore current permissive mode
+      ansible.builtin.command:
+        argv: [setenforce, "0"]
+      when:
+        - original_mode.content is defined
+        - (original_mode.content | b64decode | trim) == "Permissive"
+      changed_when: true
+
+    - ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /home/student/rhcsa-lab/obj10-02
+        - "{{ state_dir }}"

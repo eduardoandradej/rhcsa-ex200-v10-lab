@@ -1,0 +1,113 @@
+---
+- name: Prepare obj12-05 security web challenge
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    state_dir: /var/lib/rhcsa-lab/obj12-05
+    training_port: "48890"
+  tasks:
+    - ansible.builtin.file:
+        path: "{{ state_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0700"
+
+    - name: Save httpd states
+      ansible.builtin.shell: |
+        systemctl is-active httpd > "{{ state_dir }}/httpd-active" || true
+        systemctl is-enabled httpd > "{{ state_dir }}/httpd-enabled" || true
+      changed_when: false
+
+    - name: Determine active firewall zone
+      ansible.builtin.shell: |
+        set -Eeuo pipefail
+        iface="$(ip -o route show default | awk '{print $5; exit}')"
+        zone="$(firewall-cmd --get-zone-of-interface="$iface")"
+        if test -z "$zone" || test "$zone" = "no zone"; then
+          zone="$(firewall-cmd --get-default-zone)"
+        fi
+        printf '%s\n' "$zone" > "{{ state_dir }}/zone"
+      args:
+        executable: /bin/bash
+      changed_when: false
+
+    - ansible.builtin.command:
+        argv: [semanage, fcontext, -d, '/srv/secure12(/.*)?']
+      failed_when: false
+      changed_when: false
+
+    - ansible.builtin.command:
+        argv: [semanage, port, -d, -t, http_port_t, -p, tcp, "{{ training_port }}"]
+      failed_when: false
+      changed_when: false
+
+    - name: Refuse to repurpose a policy-defined port
+      ansible.builtin.shell: |
+        if semanage port -l | grep -Eq '(^|[[:space:],]){{ training_port }}([[:space:],-]|$)'; then
+          exit 1
+        fi
+      changed_when: false
+
+    - name: Ensure firewall port starts closed
+      ansible.builtin.shell: |
+        zone="$(cat "{{ state_dir }}/zone")"
+        firewall-cmd --zone="$zone" --remove-port={{ training_port }}/tcp >/dev/null 2>&1 || true
+        firewall-cmd --permanent --zone="$zone" --remove-port={{ training_port }}/tcp >/dev/null 2>&1 || true
+        firewall-cmd --reload
+      changed_when: true
+
+    - ansible.builtin.file:
+        path: /srv/secure12
+        state: absent
+
+    - ansible.builtin.file:
+        path: /srv/secure12
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - ansible.builtin.copy:
+        dest: /srv/secure12/index.html
+        content: "OBJ12 secure service ready\n"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - ansible.builtin.command:
+        argv: [chcon, -R, -t, default_t, /srv/secure12]
+      changed_when: true
+
+    - ansible.builtin.copy:
+        dest: /etc/httpd/conf.d/obj12-secure.conf
+        content: |
+          Listen {{ training_port }}
+          Alias /secure12/ "/srv/secure12/"
+          <Directory "/srv/secure12">
+              Require all granted
+          </Directory>
+        owner: root
+        group: root
+        mode: "0644"
+
+    - ansible.builtin.service:
+        name: httpd
+        state: stopped
+
+    - ansible.builtin.command:
+        argv: [systemctl, disable, httpd]
+      failed_when: false
+      changed_when: false
+
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj12-05
+        state: absent
+
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj12-05/output
+        state: directory
+        owner: student
+        group: student
+        mode: "0755"

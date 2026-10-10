@@ -1,0 +1,58 @@
+---
+- name: Finish obj10-09
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    state_dir: /var/lib/rhcsa-lab/obj10-09
+  tasks:
+    - ansible.builtin.service:
+        name: httpd
+        state: stopped
+      failed_when: false
+
+    - ansible.builtin.command:
+        argv: [semanage, fcontext, -d, '/srv/rhcsa10-final(/.*)?']
+      failed_when: false
+      changed_when: false
+
+    - ansible.builtin.command:
+        argv: [semanage, port, -d, -t, http_port_t, -p, tcp, "48889"]
+      failed_when: false
+      changed_when: false
+
+    - name: Remove firewall training port
+      ansible.builtin.shell: |
+        if test -s "{{ state_dir }}/zone"; then
+          zone="$(cat "{{ state_dir }}/zone")"
+          firewall-cmd --zone="$zone" --remove-port=48889/tcp >/dev/null 2>&1 || true
+          firewall-cmd --permanent --zone="$zone" --remove-port=48889/tcp >/dev/null 2>&1 || true
+          firewall-cmd --reload
+        fi
+      changed_when: true
+      failed_when: false
+
+    - ansible.builtin.file:
+        path: /etc/httpd/conf.d/rhcsa10-final.conf
+        state: absent
+
+    - ansible.builtin.file:
+        path: /srv/rhcsa10-final
+        state: absent
+
+    - name: Restore original httpd runtime state
+      ansible.builtin.shell: |
+        if grep -qx active "{{ state_dir }}/httpd-active" 2>/dev/null; then
+          systemctl start httpd
+        else
+          systemctl stop httpd || true
+        fi
+      changed_when: true
+      failed_when: false
+
+    - ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /home/student/rhcsa-lab/obj10-09
+        - "{{ state_dir }}"

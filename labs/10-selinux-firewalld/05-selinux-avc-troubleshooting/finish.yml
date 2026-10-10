@@ -1,0 +1,37 @@
+---
+- name: Finish obj10-05
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    state_dir: /var/lib/rhcsa-lab/obj10-05
+  tasks:
+    - ansible.builtin.command:
+        argv: [semanage, fcontext, -d, '/srv/avc10(/.*)?']
+      failed_when: false
+      changed_when: false
+
+    - ansible.builtin.file:
+        path: /etc/httpd/conf.d/rhcsa10-avc.conf
+        state: absent
+
+    - ansible.builtin.file:
+        path: /srv/avc10
+        state: absent
+
+    - name: Restore httpd runtime state
+      ansible.builtin.shell: |
+        if grep -qx active "{{ state_dir }}/httpd-active" 2>/dev/null; then
+          systemctl restart httpd
+        else
+          systemctl stop httpd || true
+        fi
+      changed_when: true
+      failed_when: false
+
+    - ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /home/student/rhcsa-lab/obj10-05
+        - "{{ state_dir }}"

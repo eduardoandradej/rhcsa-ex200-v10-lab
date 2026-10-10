@@ -1,0 +1,14 @@
+---
+id: obj11-03
+title: "Mapa direto do AutoFS"
+title_en: "Direct AutoFS map"
+objective: "Objective 11 — NFS & AutoFS"
+target: [servera]
+difficulty: 3
+duration: 28
+compatibility:
+  local: "RHEL 9.8"
+  target: "RHEL 10"
+  level: concept-and-state
+reset_policy: ansible
+status: ready

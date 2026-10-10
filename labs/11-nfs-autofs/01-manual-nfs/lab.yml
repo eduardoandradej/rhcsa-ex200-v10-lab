@@ -1,0 +1,14 @@
+---
+id: obj11-01
+title: "Descobrir, montar e desmontar NFS"
+title_en: "Discover, mount, and unmount NFS"
+objective: "Objective 11 — NFS & AutoFS"
+target: [servera]
+difficulty: 2
+duration: 20
+compatibility:
+  local: "RHEL 9.8"
+  target: "RHEL 10"
+  level: concept-and-state
+reset_policy: ansible
+status: ready

@@ -1,0 +1,48 @@
+---
+- name: Finish obj12-02
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    state_dir: /var/lib/rhcsa-lab/obj12-02
+  tasks:
+    - ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /var/www/html/ops12.html
+        - /etc/cron.d/ops12
+        - /etc/tmpfiles.d/ops12.conf
+        - /run/ops12
+        - /etc/rsyslog.d/ops12.conf
+        - /var/log/ops12.log
+        - /home/student/rhcsa-lab/obj12-02
+
+    - ansible.builtin.service:
+        name: rsyslog
+        state: restarted
+      failed_when: false
+
+    - name: Restore httpd enabled state
+      ansible.builtin.shell: |
+        if grep -qx enabled "{{ state_dir }}/httpd-enabled" 2>/dev/null; then
+          systemctl enable httpd
+        else
+          systemctl disable httpd >/dev/null 2>&1 || true
+        fi
+      changed_when: false
+      failed_when: false
+
+    - name: Restore httpd active state
+      ansible.builtin.shell: |
+        if grep -qx active "{{ state_dir }}/httpd-active" 2>/dev/null; then
+          systemctl start httpd
+        else
+          systemctl stop httpd >/dev/null 2>&1 || true
+        fi
+      changed_when: false
+      failed_when: false
+
+    - ansible.builtin.file:
+        path: "{{ state_dir }}"
+        state: absent

@@ -1,0 +1,49 @@
+---
+- name: Prepare obj12-02 operations challenge
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    state_dir: /var/lib/rhcsa-lab/obj12-02
+  tasks:
+    - ansible.builtin.file:
+        path: "{{ state_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0700"
+
+    - name: Save httpd active and enabled states
+      ansible.builtin.shell: |
+        systemctl is-active httpd > "{{ state_dir }}/httpd-active" || true
+        systemctl is-enabled httpd > "{{ state_dir }}/httpd-enabled" || true
+      changed_when: false
+
+    - ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /var/www/html/ops12.html
+        - /etc/cron.d/ops12
+        - /etc/tmpfiles.d/ops12.conf
+        - /run/ops12
+        - /etc/rsyslog.d/ops12.conf
+        - /var/log/ops12.log
+        - /home/student/rhcsa-lab/obj12-02
+
+    - ansible.builtin.service:
+        name: httpd
+        state: stopped
+      failed_when: false
+
+    - ansible.builtin.command:
+        argv: [systemctl, disable, httpd]
+      failed_when: false
+      changed_when: false
+
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj12-02/output
+        state: directory
+        owner: student
+        group: student
+        mode: "0755"

@@ -1,0 +1,76 @@
+---
+- name: Prepare Objective 10 SELinux and firewalld prerequisites
+  hosts: servera
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Ensure SELinux, web, audit, and firewall tooling is installed
+      ansible.builtin.dnf:
+        name:
+          - policycoreutils
+          - policycoreutils-python-utils
+          - selinux-policy
+          - selinux-policy-targeted
+          - setroubleshoot-server
+          - audit
+          - httpd
+          - firewalld
+          - curl
+        state: present
+
+    - name: Ensure firewalld is enabled and running
+      ansible.builtin.service:
+        name: firewalld
+        enabled: true
+        state: started
+
+    - name: Verify SELinux is available
+      ansible.builtin.command:
+        argv:
+          - getenforce
+      register: selinux_mode
+      changed_when: false
+
+    - name: Refuse to run OBJ10 with SELinux disabled
+      ansible.builtin.assert:
+        that:
+          - (selinux_mode.stdout | trim) != "Disabled"
+        fail_msg: "OBJ10 requires SELinux enabled. Restore the lab baseline before continuing."
+
+    - name: Ensure current SELinux mode is enforcing
+      ansible.builtin.command:
+        argv:
+          - setenforce
+          - "1"
+      when: (selinux_mode.stdout | trim) != "Enforcing"
+      changed_when: true
+
+    - name: Ensure persistent SELinux mode starts enforcing
+      ansible.builtin.lineinfile:
+        path: /etc/selinux/config
+        regexp: '^SELINUX='
+        line: 'SELINUX=enforcing'
+
+    - name: Verify semanage is available
+      ansible.builtin.command:
+        argv:
+          - semanage
+          - fcontext
+          - -l
+      changed_when: false
+
+    - name: Verify firewall command interface
+      ansible.builtin.command:
+        argv:
+          - firewall-cmd
+          - --state
+      register: fw_state
+      changed_when: false
+      failed_when: (fw_state.stdout | trim) != "running"
+
+    - name: Verify audit search utility
+      ansible.builtin.command:
+        argv:
+          - ausearch
+          - --version
+      changed_when: false

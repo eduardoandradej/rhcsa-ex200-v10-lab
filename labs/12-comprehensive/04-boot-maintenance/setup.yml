@@ -1,0 +1,80 @@
+---
+- name: Prepare obj12-04 boot maintenance challenge
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    state_dir: /var/lib/rhcsa-lab/obj12-04
+    training_arg: systemd.show_status=1
+  tasks:
+    - ansible.builtin.file:
+        path: "{{ state_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0700"
+
+    - ansible.builtin.command:
+        argv: [systemctl, get-default]
+      register: default_target
+      changed_when: false
+
+    - ansible.builtin.copy:
+        dest: "{{ state_dir }}/default-target"
+        content: "{{ default_target.stdout | trim }}\n"
+        owner: root
+        group: root
+        mode: "0600"
+
+    - ansible.builtin.copy:
+        src: /etc/fstab
+        dest: "{{ state_dir }}/fstab"
+        remote_src: true
+        owner: root
+        group: root
+        mode: "0600"
+
+    - name: Record whether kernel argument existed before the lab
+      ansible.builtin.shell: |
+        if grubby --info=ALL | grep -Eq 'args=.*(^|[[:space:]"])systemd.show_status=1([[:space:]"]|$)'; then
+          echo present
+        else
+          echo absent
+        fi
+      register: arg_baseline
+      changed_when: false
+
+    - ansible.builtin.copy:
+        dest: "{{ state_dir }}/arg-baseline"
+        content: "{{ arg_baseline.stdout | trim }}\n"
+        owner: root
+        group: root
+        mode: "0600"
+
+    - ansible.builtin.command:
+        argv: [grubby, --update-kernel=ALL, --remove-args=systemd.show_status=1]
+      changed_when: true
+
+    - ansible.builtin.command:
+        argv: [systemctl, set-default, graphical.target]
+      changed_when: true
+
+    - ansible.builtin.command:
+        argv: [umount, /srv/boot12]
+      failed_when: false
+      changed_when: false
+
+    - ansible.builtin.file:
+        path: /srv/boot12
+        state: absent
+
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj12-04
+        state: absent
+
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj12-04/output
+        state: directory
+        owner: student
+        group: student
+        mode: "0755"

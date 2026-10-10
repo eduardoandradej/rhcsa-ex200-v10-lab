@@ -1,0 +1,18 @@
+---
+- name: Finish obj10-06
+  hosts: servera
+  gather_facts: false
+  become: true
+  tasks:
+    - ansible.builtin.command:
+        argv: [firewall-cmd, --permanent, --delete-zone=rhcsa10]
+      failed_when: false
+      changed_when: false
+
+    - ansible.builtin.command:
+        argv: [firewall-cmd, --reload]
+      changed_when: true
+
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj10-06
+        state: absent

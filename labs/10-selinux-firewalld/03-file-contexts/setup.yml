@@ -1,0 +1,49 @@
+---
+- name: Prepare obj10-03 file contexts
+  hosts: servera
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Remove stale local fcontext rule
+      ansible.builtin.command:
+        argv:
+          - semanage
+          - fcontext
+          - -d
+          - '/srv/web10(/.*)?'
+      failed_when: false
+      changed_when: false
+
+    - ansible.builtin.file:
+        path: /srv/web10
+        state: absent
+
+    - ansible.builtin.file:
+        path: /srv/web10
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - ansible.builtin.copy:
+        dest: /srv/web10/index.html
+        content: "OBJ10 file context\n"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Force an intentionally wrong temporary label
+      ansible.builtin.command:
+        argv: [chcon, -R, -t, default_t, /srv/web10]
+      changed_when: true
+
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj10-03
+        state: absent
+
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj10-03/output
+        state: directory
+        owner: student
+        group: student
+        mode: "0755"

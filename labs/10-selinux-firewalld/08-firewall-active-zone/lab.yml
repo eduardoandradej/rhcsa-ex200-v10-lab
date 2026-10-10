@@ -1,0 +1,14 @@
+---
+id: obj10-08
+title: "Persistência de porta na zona ativa"
+title_en: "Persist a port in the active firewalld zone"
+objective: "Objective 10 — SELinux & firewalld"
+target: [servera]
+difficulty: 3
+duration: 22
+compatibility:
+  local: "RHEL 9.8"
+  target: "RHEL 10"
+  level: exact
+reset_policy: ansible
+status: ready

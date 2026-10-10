@@ -1,0 +1,14 @@
+---
+id: obj11-04
+title: "Mapa indireto com wildcard no AutoFS"
+title_en: "Indirect AutoFS wildcard map"
+objective: "Objective 11 — NFS & AutoFS"
+target: [servera]
+difficulty: 4
+duration: 30
+compatibility:
+  local: "RHEL 9.8"
+  target: "RHEL 10"
+  level: concept-and-state
+reset_policy: ansible
+status: ready

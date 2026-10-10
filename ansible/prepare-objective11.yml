@@ -1,0 +1,159 @@
+---
+- name: Prepare Objective 11 NFS server fixture
+  hosts: serverb
+  gather_facts: false
+  become: true
+  vars:
+    nfs_client: servera
+    root_dir: /srv/rhcsa11
+  tasks:
+    - name: Ensure NFS server and SELinux management packages are installed
+      ansible.builtin.dnf:
+        name:
+          - nfs-utils
+          - policycoreutils-python-utils
+          - firewalld
+        state: present
+
+    - name: Create the training export tree
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: directory
+        owner: student
+        group: student
+        mode: "{{ item.mode }}"
+      loop:
+        - { path: "{{ root_dir }}", mode: "0755" }
+        - { path: "{{ root_dir }}/manual", mode: "0755" }
+        - { path: "{{ root_dir }}/persist", mode: "0755" }
+        - { path: "{{ root_dir }}/direct", mode: "0755" }
+        - { path: "{{ root_dir }}/projects", mode: "0755" }
+        - { path: "{{ root_dir }}/projects/alpha", mode: "0755" }
+        - { path: "{{ root_dir }}/projects/beta", mode: "0755" }
+        - { path: "{{ root_dir }}/systemd", mode: "0755" }
+        - { path: "{{ root_dir }}/integrated", mode: "0755" }
+        - { path: "{{ root_dir }}/integrated/red", mode: "0755" }
+        - { path: "{{ root_dir }}/integrated/hat", mode: "0755" }
+
+    - name: Seed deterministic NFS content
+      ansible.builtin.copy:
+        dest: "{{ item.dest }}"
+        content: "{{ item.content }}\n"
+        owner: student
+        group: student
+        mode: "0644"
+      loop:
+        - { dest: "{{ root_dir }}/manual/hello.txt", content: "OBJ11 manual mount" }
+        - { dest: "{{ root_dir }}/persist/hello.txt", content: "OBJ11 persistent NFS" }
+        - { dest: "{{ root_dir }}/direct/hello.txt", content: "OBJ11 direct autofs" }
+        - { dest: "{{ root_dir }}/projects/alpha/info.txt", content: "OBJ11 alpha project" }
+        - { dest: "{{ root_dir }}/projects/beta/info.txt", content: "OBJ11 beta project" }
+        - { dest: "{{ root_dir }}/systemd/hello.txt", content: "OBJ11 systemd automount" }
+        - { dest: "{{ root_dir }}/integrated/red/info.txt", content: "OBJ11 RED team" }
+        - { dest: "{{ root_dir }}/integrated/hat/info.txt", content: "OBJ11 HAT team" }
+
+    - name: Ensure persistent SELinux file-context rule for training exports
+      ansible.builtin.shell: |
+        set -Eeuo pipefail
+        if ! semanage fcontext -l -C | grep -Fq '/srv/rhcsa11(/.*)?'; then
+          semanage fcontext -a -t public_content_rw_t '/srv/rhcsa11(/.*)?'
+        fi
+        restorecon -RF /srv/rhcsa11
+      args:
+        executable: /bin/bash
+      changed_when: false
+
+    - name: Install dedicated export definition
+      ansible.builtin.copy:
+        dest: /etc/exports.d/rhcsa11.exports
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          /srv/rhcsa11/manual {{ nfs_client }}(rw,sync,no_subtree_check)
+          /srv/rhcsa11/persist {{ nfs_client }}(rw,sync,no_subtree_check)
+          /srv/rhcsa11/direct {{ nfs_client }}(rw,sync,no_subtree_check)
+          /srv/rhcsa11/projects/alpha {{ nfs_client }}(rw,sync,no_subtree_check)
+          /srv/rhcsa11/projects/beta {{ nfs_client }}(rw,sync,no_subtree_check)
+          /srv/rhcsa11/systemd {{ nfs_client }}(rw,sync,no_subtree_check)
+          /srv/rhcsa11/integrated {{ nfs_client }}(rw,sync,no_subtree_check)
+          /srv/rhcsa11/integrated/red {{ nfs_client }}(rw,sync,no_subtree_check)
+          /srv/rhcsa11/integrated/hat {{ nfs_client }}(rw,sync,no_subtree_check)
+
+    - name: Enable and start NFS server
+      ansible.builtin.service:
+        name: nfs-server
+        enabled: true
+        state: started
+
+    - name: Reload NFS exports
+      ansible.builtin.command:
+        argv: [exportfs, -rav]
+      changed_when: false
+
+    - name: Ensure firewalld is running
+      ansible.builtin.service:
+        name: firewalld
+        enabled: true
+        state: started
+
+    - name: Permit NFSv4 and export discovery in active firewall zone
+      ansible.builtin.shell: |
+        set -Eeuo pipefail
+        iface="$(ip -o route show default | awk '{print $5; exit}')"
+        zone="$(firewall-cmd --get-zone-of-interface="$iface")"
+        if test -z "$zone" || test "$zone" = "no zone"; then
+          zone="$(firewall-cmd --get-default-zone)"
+        fi
+        for svc in nfs mountd rpc-bind; do
+          firewall-cmd --permanent --zone="$zone" --add-service="$svc" >/dev/null
+        done
+        firewall-cmd --reload >/dev/null
+      args:
+        executable: /bin/bash
+      changed_when: false
+
+    - name: Verify exported paths
+      ansible.builtin.command:
+        argv: [exportfs, -v]
+      register: exports
+      changed_when: false
+      failed_when:
+        - "'/srv/rhcsa11/manual' not in exports.stdout"
+        - "'/srv/rhcsa11/integrated' not in exports.stdout"
+
+- name: Prepare Objective 11 NFS client prerequisites
+  hosts: servera
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Ensure NFS client and automounter packages are installed
+      ansible.builtin.dnf:
+        name:
+          - nfs-utils
+          - autofs
+        state: present
+
+    - name: Ensure clean probe mount point
+      ansible.builtin.file:
+        path: /mnt/rhcsa11-probe
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Prove the NFS fixture from servera
+      ansible.builtin.shell: |
+        set -Eeuo pipefail
+        umount /mnt/rhcsa11-probe >/dev/null 2>&1 || true
+        timeout 15s mount -t nfs -o rw,sync serverb:/srv/rhcsa11/manual /mnt/rhcsa11-probe
+        grep -qx 'OBJ11 manual mount' /mnt/rhcsa11-probe/hello.txt
+        umount /mnt/rhcsa11-probe
+      args:
+        executable: /bin/bash
+      changed_when: false
+
+    - name: Remove probe mount point
+      ansible.builtin.file:
+        path: /mnt/rhcsa11-probe
+        state: absent

@@ -1,0 +1,112 @@
+---
+- name: Prepare obj10-05 AVC troubleshooting
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    state_dir: /var/lib/rhcsa-lab/obj10-05
+    lab_dir: /home/student/rhcsa-lab/obj10-05
+  tasks:
+    - ansible.builtin.file:
+        path: "{{ state_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0700"
+
+    - name: Save original httpd runtime state
+      ansible.builtin.shell: |
+        systemctl is-active httpd > "{{ state_dir }}/httpd-active" || true
+      changed_when: false
+
+    - name: Remove stale local fcontext rule
+      ansible.builtin.command:
+        argv: [semanage, fcontext, -d, '/srv/avc10(/.*)?']
+      failed_when: false
+      changed_when: false
+
+    - ansible.builtin.file:
+        path: /srv/avc10
+        state: absent
+
+    - ansible.builtin.file:
+        path: /srv/avc10
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - ansible.builtin.copy:
+        dest: /srv/avc10/index.html
+        content: "OBJ10 AVC recovered\n"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Force an intentionally wrong temporary label
+      ansible.builtin.command:
+        argv: [chcon, -R, -t, default_t, /srv/avc10]
+      changed_when: true
+
+    - ansible.builtin.copy:
+        dest: /etc/httpd/conf.d/rhcsa10-avc.conf
+        content: |
+          Alias /avc10/ "/srv/avc10/"
+          <Directory "/srv/avc10">
+              Require all granted
+          </Directory>
+        owner: root
+        group: root
+        mode: "0644"
+
+    - ansible.builtin.service:
+        name: httpd
+        state: restarted
+
+    - name: Recreate student lab directories before generating evidence
+      ansible.builtin.file:
+        path: "{{ lab_dir }}"
+        state: absent
+
+    - ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: student
+        group: student
+        mode: "0755"
+      loop:
+        - "{{ lab_dir }}/input"
+        - "{{ lab_dir }}/output"
+
+    - name: Trigger SELinux denial for investigation
+      ansible.builtin.command:
+        argv: [curl, -sS, -o, /dev/null, http://127.0.0.1/avc10/index.html]
+      register: denied_curl
+      failed_when: false
+      changed_when: false
+
+    - name: Capture bounded real AVC evidence from the live audit log
+      ansible.builtin.shell: |
+        set -Eeuo pipefail
+        out="{{ lab_dir }}/input/avc.audit"
+        : > "$out"
+
+        for attempt in 1 2 3 4 5; do
+          tail -n 5000 /var/log/audit/audit.log \
+            | grep -a 'type=AVC.*path="/srv/avc10/index.html"' \
+            | tail -n 8 > "$out" || true
+
+          if test -s "$out"; then
+            break
+          fi
+
+          curl -sS -o /dev/null http://127.0.0.1/avc10/index.html || true
+          /usr/bin/sleep 1
+        done
+
+        test -s "$out"
+        chown student:student "$out"
+        chmod 0644 "$out"
+      args:
+        executable: /bin/bash
+      changed_when: false

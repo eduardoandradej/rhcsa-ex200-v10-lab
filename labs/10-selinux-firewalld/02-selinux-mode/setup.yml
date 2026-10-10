@@ -1,0 +1,54 @@
+---
+- name: Prepare obj10-02 SELinux mode
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    state_dir: /var/lib/rhcsa-lab/obj10-02
+  tasks:
+    - ansible.builtin.file:
+        path: "{{ state_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0700"
+
+    - ansible.builtin.copy:
+        src: /etc/selinux/config
+        dest: "{{ state_dir }}/config"
+        remote_src: true
+        owner: root
+        group: root
+        mode: "0600"
+
+    - ansible.builtin.command:
+        argv: [getenforce]
+      register: original_mode
+      changed_when: false
+
+    - ansible.builtin.copy:
+        dest: "{{ state_dir }}/current-mode"
+        content: "{{ original_mode.stdout | trim }}\n"
+        owner: root
+        group: root
+        mode: "0600"
+
+    - ansible.builtin.lineinfile:
+        path: /etc/selinux/config
+        regexp: '^SELINUX='
+        line: 'SELINUX=permissive'
+
+    - ansible.builtin.command:
+        argv: [setenforce, "0"]
+      changed_when: true
+
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj10-02
+        state: absent
+
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj10-02/output
+        state: directory
+        owner: student
+        group: student
+        mode: "0755"

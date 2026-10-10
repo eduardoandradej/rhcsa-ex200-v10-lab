@@ -1,0 +1,20 @@
+---
+- name: Finish obj11-04
+  hosts: servera
+  gather_facts: false
+  become: true
+  tasks:
+    - ansible.builtin.service:
+        name: autofs
+        state: stopped
+        enabled: false
+      failed_when: false
+
+    - ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /remote11
+        - /home/student/rhcsa-lab/obj11-04
+        - /etc/auto.master.d/rhcsa11.autofs
+        - /etc/auto.rhcsa11

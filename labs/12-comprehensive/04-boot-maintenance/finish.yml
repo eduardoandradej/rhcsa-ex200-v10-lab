@@ -1,0 +1,63 @@
+---
+- name: Finish obj12-04
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    state_dir: /var/lib/rhcsa-lab/obj12-04
+  tasks:
+    - ansible.builtin.command:
+        argv: [umount, /srv/boot12]
+      failed_when: false
+      changed_when: false
+
+    - ansible.builtin.copy:
+        src: "{{ state_dir }}/fstab"
+        dest: /etc/fstab
+        remote_src: true
+        owner: root
+        group: root
+        mode: "0644"
+      failed_when: false
+
+    - ansible.builtin.command:
+        argv: [systemctl, daemon-reload]
+      changed_when: false
+
+    - ansible.builtin.slurp:
+        src: "{{ state_dir }}/default-target"
+      register: original_target
+      failed_when: false
+
+    - ansible.builtin.command:
+        argv:
+          - systemctl
+          - set-default
+          - "{{ original_target.content | b64decode | trim }}"
+      when: original_target.content is defined
+      changed_when: true
+
+    - ansible.builtin.command:
+        argv: [grubby, --update-kernel=ALL, --remove-args=systemd.show_status=1]
+      failed_when: false
+      changed_when: true
+
+    - ansible.builtin.slurp:
+        src: "{{ state_dir }}/arg-baseline"
+      register: original_arg
+      failed_when: false
+
+    - ansible.builtin.command:
+        argv: [grubby, --update-kernel=ALL, --args=systemd.show_status=1]
+      when:
+        - original_arg.content is defined
+        - (original_arg.content | b64decode | trim) == "present"
+      changed_when: true
+
+    - ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /srv/boot12
+        - /home/student/rhcsa-lab/obj12-04
+        - "{{ state_dir }}"

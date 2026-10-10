@@ -1,0 +1,14 @@
+---
+id: obj10-09
+title: "Desafio integrado SELinux e firewalld"
+title_en: "Integrated SELinux and firewalld challenge"
+objective: "Objective 10 — SELinux & firewalld"
+target: [servera]
+difficulty: 5
+duration: 40
+compatibility:
+  local: "RHEL 9.8"
+  target: "RHEL 10"
+  level: concept-and-state
+reset_policy: ansible
+status: ready

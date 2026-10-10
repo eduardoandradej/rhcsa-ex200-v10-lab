@@ -1,0 +1,65 @@
+---
+- name: Finish obj12-05
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    state_dir: /var/lib/rhcsa-lab/obj12-05
+  tasks:
+    - ansible.builtin.service:
+        name: httpd
+        state: stopped
+      failed_when: false
+
+    - ansible.builtin.command:
+        argv: [semanage, fcontext, -d, '/srv/secure12(/.*)?']
+      failed_when: false
+      changed_when: false
+
+    - ansible.builtin.command:
+        argv: [semanage, port, -d, -t, http_port_t, -p, tcp, "48890"]
+      failed_when: false
+      changed_when: false
+
+    - name: Remove firewall port
+      ansible.builtin.shell: |
+        if test -s "{{ state_dir }}/zone"; then
+          zone="$(cat "{{ state_dir }}/zone")"
+          firewall-cmd --zone="$zone" --remove-port=48890/tcp >/dev/null 2>&1 || true
+          firewall-cmd --permanent --zone="$zone" --remove-port=48890/tcp >/dev/null 2>&1 || true
+          firewall-cmd --reload
+        fi
+      changed_when: true
+      failed_when: false
+
+    - ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/httpd/conf.d/obj12-secure.conf
+        - /srv/secure12
+        - /home/student/rhcsa-lab/obj12-05
+
+    - name: Restore httpd enabled state
+      ansible.builtin.shell: |
+        if grep -qx enabled "{{ state_dir }}/httpd-enabled" 2>/dev/null; then
+          systemctl enable httpd
+        else
+          systemctl disable httpd >/dev/null 2>&1 || true
+        fi
+      changed_when: false
+      failed_when: false
+
+    - name: Restore httpd active state
+      ansible.builtin.shell: |
+        if grep -qx active "{{ state_dir }}/httpd-active" 2>/dev/null; then
+          systemctl start httpd
+        else
+          systemctl stop httpd >/dev/null 2>&1 || true
+        fi
+      changed_when: false
+      failed_when: false
+
+    - ansible.builtin.file:
+        path: "{{ state_dir }}"
+        state: absent

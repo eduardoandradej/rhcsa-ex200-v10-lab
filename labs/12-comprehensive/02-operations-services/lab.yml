@@ -1,0 +1,14 @@
+---
+id: obj12-02
+title: "Desafio final de serviços, agendamento e logs"
+title_en: "Final services, scheduling, and logs challenge"
+objective: "Objective 12 — Comprehensive EX200 Challenges"
+target: [servera]
+difficulty: 5
+duration: 35
+compatibility:
+  local: "RHEL 9.8"
+  target: "RHEL 10"
+  level: concept-and-state
+reset_policy: ansible
+status: ready

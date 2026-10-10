@@ -1,0 +1,17 @@
+---
+- name: Finish obj10-03
+  hosts: servera
+  gather_facts: false
+  become: true
+  tasks:
+    - ansible.builtin.command:
+        argv: [semanage, fcontext, -d, '/srv/web10(/.*)?']
+      failed_when: false
+      changed_when: false
+
+    - ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /srv/web10
+        - /home/student/rhcsa-lab/obj10-03

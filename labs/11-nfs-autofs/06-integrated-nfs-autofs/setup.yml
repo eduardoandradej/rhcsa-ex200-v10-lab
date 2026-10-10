@@ -1,0 +1,46 @@
+---
+- name: Prepare obj11-06 integrated NFS and AutoFS
+  hosts: servera
+  gather_facts: false
+  become: true
+  tasks:
+    - ansible.builtin.service:
+        name: autofs
+        state: stopped
+        enabled: false
+      failed_when: false
+
+    - ansible.builtin.command:
+        argv: [umount, /mnt/rhcsa11-check]
+      failed_when: false
+      changed_when: false
+
+    - ansible.builtin.file:
+        path: /etc/auto.master.d/rhcsa11.autofs
+        state: absent
+
+    - ansible.builtin.file:
+        path: /etc/auto.rhcsa11
+        state: absent
+
+    - ansible.builtin.file:
+        path: /remote11-final
+        state: absent
+
+    - ansible.builtin.file:
+        path: /mnt/rhcsa11-check
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj11-06
+        state: absent
+
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj11-06/output
+        state: directory
+        owner: student
+        group: student
+        mode: "0755"

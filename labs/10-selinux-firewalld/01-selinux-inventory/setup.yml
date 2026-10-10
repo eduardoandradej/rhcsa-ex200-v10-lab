@@ -1,0 +1,16 @@
+---
+- name: Prepare obj10-01 SELinux inventory
+  hosts: servera
+  gather_facts: false
+  become: true
+  tasks:
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj10-01
+        state: absent
+
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj10-01/output
+        state: directory
+        owner: student
+        group: student
+        mode: "0755"

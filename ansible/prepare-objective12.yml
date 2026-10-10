@@ -1,0 +1,70 @@
+---
+- name: Prepare Objective 12 comprehensive challenge prerequisites
+  hosts: servera
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Ensure common challenge packages are installed
+      ansible.builtin.dnf:
+        name:
+          - acl
+          - attr
+          - bzip2
+          - cronie
+          - rsyslog
+          - httpd
+          - firewalld
+          - policycoreutils-python-utils
+          - nfs-utils
+          - autofs
+          - lvm2
+          - xfsprogs
+          - parted
+          - grubby
+        state: present
+
+    - name: Ensure core daemons required by the challenges are available
+      ansible.builtin.service:
+        name: "{{ item }}"
+        state: started
+      loop:
+        - crond
+        - rsyslog
+        - firewalld
+
+    - name: Require SELinux enabled for the comprehensive security tasks
+      ansible.builtin.command:
+        argv: [getenforce]
+      register: selinux_mode
+      changed_when: false
+      failed_when: (selinux_mode.stdout | trim) == "Disabled"
+
+    - name: Keep the comprehensive environment in enforcing mode
+      ansible.builtin.command:
+        argv: [setenforce, "1"]
+      when: (selinux_mode.stdout | trim) != "Enforcing"
+      changed_when: true
+
+    - name: Verify the protected root disk is not a training target
+      ansible.builtin.shell: |
+        test "$(findmnt -n -o SOURCE / | sed 's/[0-9]*$//')" != "/dev/vdb"
+      args:
+        executable: /bin/bash
+      changed_when: false
+
+    - name: Verify serverb is reachable
+      ansible.builtin.command:
+        argv: [ping, -c, "1", -W, "2", serverb]
+      changed_when: false
+
+- name: Verify Objective 11 NFS provider remains available
+  hosts: serverb
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Verify NFS training exports exist
+      ansible.builtin.command:
+        argv: [exportfs, -v]
+      register: nfs_exports
+      changed_when: false
+      failed_when: "'/srv/rhcsa11/integrated' not in nfs_exports.stdout"

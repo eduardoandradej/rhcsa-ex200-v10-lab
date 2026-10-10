@@ -1,0 +1,79 @@
+---
+- name: Prepare obj12-03 storage challenge
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    state_dir: /var/lib/rhcsa-lab/obj12-03
+  tasks:
+    - name: Install storage guard
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../../../ansible/files/rhcsa-storage-guard"
+        dest: /usr/local/sbin/rhcsa-storage-guard
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Install storage reset helper
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../../../ansible/files/rhcsa-storage-reset"
+        dest: /usr/local/sbin/rhcsa-storage-reset
+        owner: root
+        group: root
+        mode: "0755"
+
+    - ansible.builtin.file:
+        path: "{{ state_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0700"
+
+    - ansible.builtin.copy:
+        src: /etc/fstab
+        dest: "{{ state_dir }}/fstab"
+        remote_src: true
+        owner: root
+        group: root
+        mode: "0600"
+
+    - name: Clear stale training state
+      ansible.builtin.shell: |
+        set +e
+        umount /srv/data12 >/dev/null 2>&1
+        for dev in $(awk 'NR>1{print $1}' /proc/swaps); do
+          resolved="$(readlink -f "$dev" 2>/dev/null || echo "$dev")"
+          case "$resolved" in
+            /dev/mapper/vg12-*|/dev/dm-*) swapoff "$dev" >/dev/null 2>&1 || true ;;
+          esac
+        done
+        vgremove -ff -y vg12 >/dev/null 2>&1 || true
+        exit 0
+      args:
+        executable: /bin/bash
+      changed_when: false
+
+    - name: Reset authorized scratch disk
+      ansible.builtin.command:
+        argv: [/usr/local/sbin/rhcsa-storage-reset, /dev/vdb]
+      changed_when: true
+
+    - name: Guard authorized scratch disk
+      ansible.builtin.command:
+        argv: [/usr/local/sbin/rhcsa-storage-guard, blank, /dev/vdb]
+      changed_when: false
+
+    - ansible.builtin.file:
+        path: /srv/data12
+        state: absent
+
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj12-03
+        state: absent
+
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj12-03/output
+        state: directory
+        owner: student
+        group: student
+        mode: "0755"

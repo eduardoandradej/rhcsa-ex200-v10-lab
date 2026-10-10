@@ -1,0 +1,55 @@
+---
+- name: Prepare obj12-06 final mixed challenge
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    state_dir: /var/lib/rhcsa-lab/obj12-06
+  tasks:
+    - ansible.builtin.file:
+        path: "{{ state_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0700"
+
+    - name: Save AutoFS active/enabled state
+      ansible.builtin.shell: |
+        systemctl is-active autofs > "{{ state_dir }}/autofs-active" || true
+        systemctl is-enabled autofs > "{{ state_dir }}/autofs-enabled" || true
+      changed_when: false
+
+    - ansible.builtin.service:
+        name: autofs
+        state: stopped
+        enabled: false
+      failed_when: false
+
+    - ansible.builtin.command:
+        argv: [userdel, -r, operator12]
+      failed_when: false
+      changed_when: false
+
+    - ansible.builtin.command:
+        argv: [groupdel, opsfinal12]
+      failed_when: false
+      changed_when: false
+
+    - ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /etc/auto.master.d/final12.autofs
+        - /etc/auto.final12
+        - /remote12-final
+        - /srv/final12
+        - /usr/local/bin/final-report12
+        - /etc/cron.d/final12
+        - /home/student/rhcsa-lab/obj12-06
+
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj12-06/output
+        state: directory
+        owner: student
+        group: student
+        mode: "0755"

@@ -1,0 +1,25 @@
+---
+- name: Finish obj10-08
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    state_dir: /var/lib/rhcsa-lab/obj10-08
+  tasks:
+    - name: Remove training port
+      ansible.builtin.shell: |
+        if test -s "{{ state_dir }}/zone"; then
+          zone="$(cat "{{ state_dir }}/zone")"
+          firewall-cmd --zone="$zone" --remove-port=45102/tcp >/dev/null 2>&1 || true
+          firewall-cmd --permanent --zone="$zone" --remove-port=45102/tcp >/dev/null 2>&1 || true
+          firewall-cmd --reload
+        fi
+      changed_when: true
+      failed_when: false
+
+    - ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /home/student/rhcsa-lab/obj10-08
+        - "{{ state_dir }}"

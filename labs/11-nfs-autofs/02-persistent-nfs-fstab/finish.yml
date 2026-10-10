@@ -1,0 +1,33 @@
+---
+- name: Finish obj11-02
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    state_dir: /var/lib/rhcsa-lab/obj11-02
+  tasks:
+    - ansible.builtin.command:
+        argv: [umount, /mnt/rhcsa11-persist]
+      failed_when: false
+      changed_when: false
+
+    - ansible.builtin.copy:
+        src: "{{ state_dir }}/fstab"
+        dest: /etc/fstab
+        remote_src: true
+        owner: root
+        group: root
+        mode: "0644"
+      failed_when: false
+
+    - ansible.builtin.command:
+        argv: [systemctl, daemon-reload]
+      changed_when: false
+
+    - ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /mnt/rhcsa11-persist
+        - /home/student/rhcsa-lab/obj11-02
+        - "{{ state_dir }}"

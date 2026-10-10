@@ -1,0 +1,14 @@
+---
+id: obj10-05
+title: "Diagnóstico de AVC e correção de contexto"
+title_en: "Diagnose AVC denial and repair file context"
+objective: "Objective 10 — SELinux & firewalld"
+target: [servera]
+difficulty: 4
+duration: 32
+compatibility:
+  local: "RHEL 9.8"
+  target: "RHEL 10"
+  level: concept-and-state
+reset_policy: ansible
+status: ready

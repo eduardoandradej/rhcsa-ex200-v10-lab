@@ -1,0 +1,35 @@
+---
+- name: Prepare obj10-06 firewalld custom zone
+  hosts: servera
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Remove stale training zone
+      ansible.builtin.command:
+        argv: [firewall-cmd, --permanent, --delete-zone=rhcsa10]
+      failed_when: false
+      changed_when: false
+
+    - ansible.builtin.command:
+        argv: [firewall-cmd, --reload]
+      changed_when: true
+
+    - name: Create clean training zone
+      ansible.builtin.command:
+        argv: [firewall-cmd, --permanent, --new-zone=rhcsa10]
+      changed_when: true
+
+    - ansible.builtin.command:
+        argv: [firewall-cmd, --reload]
+      changed_when: true
+
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj10-06
+        state: absent
+
+    - ansible.builtin.file:
+        path: /home/student/rhcsa-lab/obj10-06/output
+        state: directory
+        owner: student
+        group: student
+        mode: "0755"
