@@ -2,69 +2,68 @@
 
 [Índice](README.md) · [Home](../../README.md) · [Anterior](02-host-kvm.md) · [Próximo](04-configuracao-vms.md)
 
-**Onde executar:** host KVM. Esta etapa cria VMs novas; não execute os comandos sobre nomes/discos já usados.
+Nesta etapa são criadas as três máquinas virtuais que formam o ambiente do laboratório:
 
-## Criar bastion, servera e serverb
+| Máquina | Função principal | RAM | vCPU | Disco do sistema |
+|---|---|---:|---:|---:|
+| `bastion` | Estação de controle, Git, Ansible e comando `lab` | 2 GiB | 2 | 30 GiB |
+| `servera` | Alvo principal dos exercícios | 3 GiB | 2 | 30 GiB |
+| `serverb` | Alvo auxiliar dos exercícios | 2 GiB | 2 | 30 GiB |
 
-```bash
-sudo virsh -c qemu:///system list --all
-```
+O projeto oferece dois métodos de implantação. Escolha apenas um deles.
 
-Abra uma sessão gráfica no host para acompanhar o instalador. Se o host for remoto, use virt-manager por uma conexão libvirt/SSH autorizada. Os comandos usam `--noautoconsole`; conecte ao console gráfico para instalar o sistema.
+## 3.1 Método A — instalação manual a partir da ISO do RHEL
 
-```bash
-sudo virt-install --connect qemu:///system --name bastion \
-  --memory 2048 --vcpus 2 --cpu host --osinfo detect=on,require=off \
-  --disk pool=default,size=30,format=qcow2,bus=virtio \
-  --network network=rhcsa-lab,model=virtio \
-  --cdrom /var/lib/libvirt/images/rhel-9.8-x86_64-dvd.iso \
-  --graphics vnc,listen=127.0.0.1 --noautoconsole
+Neste método, cada máquina virtual é criada individualmente e o Red Hat Enterprise Linux é instalado a partir da mídia oficial.
 
-sudo virt-install --connect qemu:///system --name servera \
-  --memory 3072 --vcpus 2 --cpu host --osinfo detect=on,require=off \
-  --disk pool=default,size=30,format=qcow2,bus=virtio \
-  --disk pool=default,size=5,format=qcow2,bus=virtio \
-  --disk pool=default,size=5,format=qcow2,bus=virtio \
-  --disk pool=default,size=3,format=qcow2,bus=virtio \
-  --disk pool=default,size=2,format=qcow2,bus=virtio \
-  --network network=rhcsa-lab,model=virtio \
-  --cdrom /var/lib/libvirt/images/rhel-9.8-x86_64-dvd.iso \
-  --graphics vnc,listen=127.0.0.1 --noautoconsole
+É o caminho recomendado para quem deseja praticar também:
 
-sudo virt-install --connect qemu:///system --name serverb \
-  --memory 2048 --vcpus 2 --cpu host --osinfo detect=on,require=off \
-  --disk pool=default,size=30,format=qcow2,bus=virtio \
-  --disk pool=default,size=5,format=qcow2,bus=virtio \
-  --disk pool=default,size=3,format=qcow2,bus=virtio \
-  --network network=rhcsa-lab,model=virtio \
-  --cdrom /var/lib/libvirt/images/rhel-9.8-x86_64-dvd.iso \
-  --graphics vnc,listen=127.0.0.1 --noautoconsole
-```
+- criação das VMs;
+- instalação do RHEL;
+- seleção do disco de instalação;
+- configuração inicial do sistema;
+- preparação completa do ambiente desde o início.
 
-Abra cada console (ou selecione a VM no virt-manager):
+[Seguir o Método A — instalação manual](03a-instalacao-manual.md)
 
-```bash
-sudo virt-viewer --connect qemu:///system bastion
-sudo virt-viewer --connect qemu:///system servera
-sudo virt-viewer --connect qemu:///system serverb
-```
+## 3.2 Método B — implantação a partir de uma imagem-base
 
-## Instalar o sistema nas três VMs
+Neste método, uma imagem QCOW2 previamente preparada é utilizada como ponto de partida para as três máquinas virtuais.
 
-1. Instale RHEL 9.8; escolha instalação mínima.
-2. No destino da instalação, selecione **somente o disco de 30 GiB (`vda`)**. Deixe os discos extras sem partições para os exercícios.
-3. Configure hostname e IP conforme a etapa 4, durante o instalador ou após instalar.
-4. Crie `student` como administrador e defina senhas locais. Não publique as senhas.
-5. Conclua a instalação e reinicie pelo disco do sistema.
+O objetivo é reduzir o tempo necessário para montar o ambiente e permitir que o estudante chegue mais rapidamente aos laboratórios RHCSA.
 
-Depois, no host, verifique discos e interfaces:
+Mesmo utilizando a imagem-base, cada VM será individualizada antes do uso, recebendo:
 
-```bash
-sudo virsh -c qemu:///system domblklist servera
-sudo virsh -c qemu:///system domblklist serverb
-sudo virsh -c qemu:///system domiflist bastion
-```
+- disco próprio;
+- identidade própria;
+- hostname próprio;
+- endereço IP próprio;
+- endereço MAC próprio;
+- novas chaves SSH do host;
+- registro Red Hat individual, quando aplicável.
 
-**Antes de avançar:** três VMs instaladas, inicializando pelo disco, com discos extras preservados. Valide tamanhos e nomes com `lsblk` dentro de cada VM.
+[Seguir o Método B — imagem-base/template](03b-imagem-template.md)
 
-[Índice](README.md) · [Home](../../README.md) · [Anterior](02-host-kvm.md) · [Próximo](04-configuracao-vms.md)
+## Qual método escolher?
+
+| Situação | Método recomendado |
+|---|---|
+| Primeira montagem do laboratório | Método A |
+| Deseja aprender também a instalação do RHEL | Método A |
+| Deseja reproduzir todo o processo manualmente | Método A |
+| Já conhece instalação de RHEL | Método B |
+| Precisa reconstruir rapidamente o laboratório | Método B |
+| Novo host KVM para demonstrações ou estudos | Método B |
+
+Os dois métodos devem resultar na mesma arquitetura lógica:
+
+```text
+                    Host KVM/libvirt
+                          |
+                    rhcsa-lab
+                  192.168.100.0/24
+                          |
+          +---------------+---------------+
+          |               |               |
+       bastion          servera         serverb
+   192.168.100.10   192.168.100.11  192.168.100.12
