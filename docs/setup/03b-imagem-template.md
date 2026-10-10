@@ -153,9 +153,9 @@ As três VMs serão, portanto, independentes da imagem original.
 
 A distribuição pública da imagem-base deve observar os termos aplicáveis ao Red Hat Enterprise Linux.
 
-Por esse motivo, o repositório não incorpora arquivos QCOW2 ou ISOs do RHEL.
+A imagem-base e o arquivo de verificação SHA-256 estão disponíveis na pasta pública do projeto no Google Drive:
 
-Quando uma fonte de download autorizada estiver disponível, ela deverá fornecer:
+[Baixar imagem-base do laboratório](https://drive.google.com/drive/folders/1j7k401rD8cCLUWR0aHalU-KVS-MwG8G4?usp=sharing0)
 
 ```text
 rhel-rhcsa-base-v1.qcow2
