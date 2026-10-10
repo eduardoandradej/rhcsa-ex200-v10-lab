@@ -4,13 +4,13 @@
 
 **Laboratório hands-on independente para prática estruturada de administração Red Hat Enterprise Linux, com foco no RHCSA / EX200.**
 
-![Release](https://img.shields.io/badge/release-v1.8.4-2f3136)
-![Curriculum](https://img.shields.io/badge/curr%C3%ADculo-100%20itens-2f3136)
-![Automated Labs](https://img.shields.io/badge/labs%20automatizados-98-2f3136)
-![Manual Drills](https://img.shields.io/badge/drills%20manuais-2-2f3136)
-![Local Platform](https://img.shields.io/badge/plataforma%20local-RHEL%209.8-2f3136)
-![Target](https://img.shields.io/badge/alvo-RHEL%2010%20%2F%20EX200-2f3136)
-![License](https://img.shields.io/badge/licen%C3%A7a-Apache%202.0-2f3136)
+![Release](https://img.shields.io/badge/release-v1.8.4-2ea44f?style=flat-square)
+![Currículo](https://img.shields.io/badge/curr%C3%ADculo-100%20itens-007ec6?style=flat-square)
+![Labs](https://img.shields.io/badge/labs%20automatizados-98-2ea44f?style=flat-square)
+![Drills](https://img.shields.io/badge/drills%20manuais-2-f39c12?style=flat-square)
+![Plataforma](https://img.shields.io/badge/plataforma%20local-RHEL%209.8-7952b3?style=flat-square)
+![Alvo](https://img.shields.io/badge/alvo-RHEL%2010%20%2F%20EX200-c62828?style=flat-square)
+![Licença](https://img.shields.io/badge/licen%C3%A7a-Apache%202.0-6c757d?style=flat-square)
 
 </div>
 
