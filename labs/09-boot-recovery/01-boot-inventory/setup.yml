@@ -1,0 +1,18 @@
+---
+- name: Prepare obj09-01 boot inventory
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    lab_root: /home/student/rhcsa-lab/obj09-01
+  tasks:
+    - ansible.builtin.file:
+        path: "{{ lab_root }}"
+        state: absent
+
+    - ansible.builtin.file:
+        path: "{{ lab_root }}/output"
+        state: directory
+        owner: student
+        group: student
+        mode: "0755"

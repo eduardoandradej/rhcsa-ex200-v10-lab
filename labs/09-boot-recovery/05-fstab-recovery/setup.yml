@@ -1,0 +1,107 @@
+---
+- name: Prepare obj09-05 safe fstab recovery
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    lab_root: /home/student/rhcsa-lab/obj09-05
+    state_dir: /var/lib/rhcsa-lab/obj09-05
+  tasks:
+    - name: Install storage guard
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../../../ansible/files/rhcsa-storage-guard"
+        dest: /usr/local/sbin/rhcsa-storage-guard
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Install storage reset helper
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../../../ansible/files/rhcsa-storage-reset"
+        dest: /usr/local/sbin/rhcsa-storage-reset
+        owner: root
+        group: root
+        mode: "0755"
+
+    - ansible.builtin.file:
+        path: "{{ lab_root }}"
+        state: absent
+
+    - ansible.builtin.file:
+        path: "{{ lab_root }}/output"
+        state: directory
+        owner: student
+        group: student
+        mode: "0755"
+
+    - ansible.builtin.file:
+        path: "{{ state_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0700"
+
+    - name: Guard scratch disk
+      ansible.builtin.command:
+        argv:
+          - /usr/local/sbin/rhcsa-storage-guard
+          - blank
+          - /dev/vdb
+      changed_when: false
+
+    - name: Save fstab baseline
+      ansible.builtin.copy:
+        src: /etc/fstab
+        dest: "{{ state_dir }}/fstab"
+        remote_src: true
+        owner: root
+        group: root
+        mode: "0600"
+
+    - name: Create safe XFS training filesystem
+      ansible.builtin.shell: |
+        set -Eeuo pipefail
+        parted -s /dev/vdb mklabel gpt
+        parted -s /dev/vdb mkpart boot09 xfs 1MiB 513MiB
+        partprobe /dev/vdb || true
+        udevadm settle --timeout=15 || true
+        for i in $(seq 1 15); do
+          test -b /dev/vdb1 && break
+          sleep 1
+        done
+        test -b /dev/vdb1
+        mkfs.xfs -f -L BOOT09 /dev/vdb1
+      args:
+        executable: /bin/bash
+      changed_when: true
+
+    - name: Read training filesystem UUID
+      ansible.builtin.command:
+        argv:
+          - blkid
+          - -s
+          - UUID
+          - -o
+          - value
+          - /dev/vdb1
+      register: training_uuid
+      changed_when: false
+
+    - name: Ensure the intended mount point is initially missing
+      ansible.builtin.file:
+        path: /srv/recovery09
+        state: absent
+
+    - name: Add deliberately incomplete but boot-safe fstab entry
+      ansible.builtin.lineinfile:
+        path: /etc/fstab
+        line: "UUID={{ training_uuid.stdout | trim }} /srv/recovery09 xfs defaults,nofail 0 0"
+        insertafter: EOF
+        state: present
+
+    - name: Reload systemd fstab-generated units
+      ansible.builtin.command:
+        argv:
+          - systemctl
+          - daemon-reload
+      changed_when: true

@@ -1,0 +1,46 @@
+---
+- name: Finish obj09-05
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    state_dir: /var/lib/rhcsa-lab/obj09-05
+  tasks:
+    - name: Unmount training filesystem if mounted
+      ansible.builtin.command:
+        argv:
+          - umount
+          - /srv/recovery09
+      failed_when: false
+      changed_when: true
+
+    - name: Restore fstab baseline
+      ansible.builtin.copy:
+        src: "{{ state_dir }}/fstab"
+        dest: /etc/fstab
+        remote_src: true
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Reload systemd after restoring fstab
+      ansible.builtin.command:
+        argv:
+          - systemctl
+          - daemon-reload
+      changed_when: true
+
+    - name: Reset only the authorized scratch disk
+      ansible.builtin.command:
+        argv:
+          - /usr/local/sbin/rhcsa-storage-reset
+          - /dev/vdb
+      changed_when: true
+
+    - ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /srv/recovery09
+        - /home/student/rhcsa-lab/obj09-05
+        - "{{ state_dir }}"

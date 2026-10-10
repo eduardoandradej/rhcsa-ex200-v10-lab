@@ -1,0 +1,49 @@
+---
+- name: Finish obj09-07
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    state_dir: /var/lib/rhcsa-lab/obj09-07
+    training_arg: systemd.show_status=1
+  tasks:
+    - name: Restore original default target
+      ansible.builtin.shell: |
+        if test -s "{{ state_dir }}/default-target"; then
+          systemctl set-default "$(cat "{{ state_dir }}/default-target")"
+        fi
+      changed_when: true
+      failed_when: false
+
+    - name: Remove training argument
+      ansible.builtin.command:
+        argv:
+          - grubby
+          - --update-kernel=ALL
+          - "--remove-args={{ training_arg }}"
+      failed_when: false
+      changed_when: true
+
+    - name: Read original argument state
+      ansible.builtin.slurp:
+        src: "{{ state_dir }}/arg-baseline"
+      register: arg_baseline
+      failed_when: false
+
+    - name: Restore training argument when originally present
+      ansible.builtin.command:
+        argv:
+          - grubby
+          - --update-kernel=ALL
+          - "--args={{ training_arg }}"
+      when:
+        - arg_baseline.content is defined
+        - (arg_baseline.content | b64decode | trim) == "present"
+      changed_when: true
+
+    - ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /home/student/rhcsa-lab/obj09-07
+        - "{{ state_dir }}"

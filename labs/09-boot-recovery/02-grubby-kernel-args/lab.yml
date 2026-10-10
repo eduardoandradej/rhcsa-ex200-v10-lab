@@ -1,0 +1,14 @@
+---
+id: obj09-02
+title: "Argumentos persistentes do kernel com grubby"
+title_en: "Persistent kernel arguments with grubby"
+objective: "Objective 09 — Boot, GRUB & Recovery"
+target: [servera]
+difficulty: 3
+duration: 22
+compatibility:
+  local: "RHEL 9.8"
+  target: "RHEL 10"
+  level: exact
+reset_policy: ansible
+status: ready

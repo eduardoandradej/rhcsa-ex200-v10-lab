@@ -67,3 +67,9 @@ bash tests/release-gate-obj03-repo-access.sh
 
 # Objective 05 non-interactive integration wait
 bash tests/release-gate-obj05-noninteractive-wait.sh
+
+# Objective 09 automated/manual recovery boundary
+bash tests/release-gate-obj09-scope.sh
+
+# Objective 08 GPT partition grader portability
+bash tests/release-gate-obj08-partition-grader.sh

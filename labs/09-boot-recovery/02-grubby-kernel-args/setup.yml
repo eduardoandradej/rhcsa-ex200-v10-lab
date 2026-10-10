@@ -1,0 +1,52 @@
+---
+- name: Prepare obj09-02 grubby kernel arguments
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    lab_root: /home/student/rhcsa-lab/obj09-02
+    state_dir: /var/lib/rhcsa-lab/obj09-02
+    training_arg: systemd.show_status=1
+  tasks:
+    - ansible.builtin.file:
+        path: "{{ lab_root }}"
+        state: absent
+
+    - ansible.builtin.file:
+        path: "{{ lab_root }}/output"
+        state: directory
+        owner: student
+        group: student
+        mode: "0755"
+
+    - ansible.builtin.file:
+        path: "{{ state_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0700"
+
+    - name: Record whether the training argument existed before the lab
+      ansible.builtin.shell: |
+        if grubby --info=ALL | grep -Eq 'args=.*(^|[[:space:]"]){{ training_arg }}([[:space:]"]|$)'; then
+          echo present
+        else
+          echo absent
+        fi
+      register: arg_baseline
+      changed_when: false
+
+    - ansible.builtin.copy:
+        dest: "{{ state_dir }}/arg-baseline"
+        content: "{{ arg_baseline.stdout | trim }}\n"
+        owner: root
+        group: root
+        mode: "0600"
+
+    - name: Remove the training argument for a deterministic starting state
+      ansible.builtin.command:
+        argv:
+          - grubby
+          - --update-kernel=ALL
+          - "--remove-args={{ training_arg }}"
+      changed_when: true

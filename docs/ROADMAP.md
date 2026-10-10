@@ -2,43 +2,41 @@
 
 ## Estado atual
 
-| Objective | Tema | Labs |
+| Objective | Tema | Labs / itens |
 |---|---|---:|
 | 01 | Essential Tools | 10 — concluído |
 | 02 | Users & Groups | 8 — concluído |
 | 03 | RPM, DNF & Repositories | 8 — concluído |
 | 04 | Simple Shell Scripts | 8 — concluído |
-| 05 | Processes, Scheduling, Tuning & systemd | 10 — concluído v1.1.5 |
+| 05 | Processes, Scheduling, Tuning & systemd | 10 — concluído |
+| 06 | Networking / NetworkManager | 8 — concluído |
+| 07 | Scheduling, Temporary Files, Logging & Time | 8 — concluído |
+| 08 | Partitions, Filesystems, Swap & LVM | 12 — concluído |
+| 09 | Boot, GRUB & Recovery | 7 — v1.5.0 |
 
-| 06 | Networking / NetworkManager | 8 — implementação v1.2.0 |
+OBJ09 has **5 automated/runtime-gradeable labs** and **2 manual console
+drills** (`obj09-04` and `obj09-06`).
 
-Total após esta entrega: **52 labs**.
+Totals after v1.5.0:
+
+- automated runtime-gradeable labs: **77**;
+- curriculum items including manual console drills: **79**.
 
 ## Próximos blocos
 
 | Objective | Tema | Labs estimados |
 |---|---|---:|
-| 07 | Scheduling, logs e chrony | 8 |
-| 08 | Storage, swap e LVM | 12 |
-| 09 | Boot, GRUB e recuperação | 7 |
 | 10 | SELinux e firewalld | 9 |
 | 11 | NFS e autofs | 6 |
 | 12 | Simulados integrados EX200 | 6 |
 
-> A estimativa original de 9 labs para OBJ05 foi ampliada para 10 para
-> manter separado o treinamento de job control, sinais, nice/renice,
-> TuneD e os três níveis de gerenciamento systemd.
-
 ## Quality gate
 
-Each ready lab includes:
+Every `ready` lab includes setup, PT-BR and EN prompts, behavior/state grader,
+finish/cleanup, reference solution, and automated reference solver.
 
-- setup;
-- PT-BR and EN prompts;
-- behavior/state grader;
-- finish/cleanup;
-- reference solution;
-- automated reference solver.
+Manual console entries are explicitly marked `manual-only` and are excluded
+from automated reference integration. The release gate verifies this boundary.
 
-The release gate validates Python, shell syntax, YAML contracts, grader
-`--json`, Ansible syntax, and CLI smoke.
+The release gate also validates Python, shell syntax, YAML contracts, grader
+`--json`, Ansible syntax on the lab host, and CLI smoke.

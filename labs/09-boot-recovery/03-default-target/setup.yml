@@ -1,0 +1,49 @@
+---
+- name: Prepare obj09-03 default target
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    lab_root: /home/student/rhcsa-lab/obj09-03
+    state_dir: /var/lib/rhcsa-lab/obj09-03
+  tasks:
+    - ansible.builtin.file:
+        path: "{{ lab_root }}"
+        state: absent
+
+    - ansible.builtin.file:
+        path: "{{ lab_root }}/output"
+        state: directory
+        owner: student
+        group: student
+        mode: "0755"
+
+    - ansible.builtin.file:
+        path: "{{ state_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0700"
+
+    - name: Record original default target
+      ansible.builtin.command:
+        argv:
+          - systemctl
+          - get-default
+      register: original_target
+      changed_when: false
+
+    - ansible.builtin.copy:
+        dest: "{{ state_dir }}/default-target"
+        content: "{{ original_target.stdout | trim }}\n"
+        owner: root
+        group: root
+        mode: "0600"
+
+    - name: Force a deterministic initial target
+      ansible.builtin.command:
+        argv:
+          - systemctl
+          - set-default
+          - graphical.target
+      changed_when: true

@@ -1,0 +1,59 @@
+---
+- name: Prepare Objective 09 boot and recovery prerequisites
+  hosts: servera
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Ensure shared lab root is traversable
+      ansible.builtin.file:
+        path: /var/lib/rhcsa-lab
+        state: directory
+        owner: root
+        group: root
+        mode: "0711"
+
+    - name: Ensure boot and recovery tooling is installed
+      ansible.builtin.dnf:
+        name:
+          - grubby
+          - grub2-tools
+          - dracut
+          - xfsprogs
+          - parted
+        state: present
+
+    - name: Install storage guard for the safe fstab recovery lab
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/files/rhcsa-storage-guard"
+        dest: /usr/local/sbin/rhcsa-storage-guard
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Install storage reset helper for the safe fstab recovery lab
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/files/rhcsa-storage-reset"
+        dest: /usr/local/sbin/rhcsa-storage-reset
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Verify grubby can inspect boot entries
+      ansible.builtin.command:
+        argv:
+          - grubby
+          - --info=ALL
+      changed_when: false
+
+    - name: Verify default systemd target can be queried
+      ansible.builtin.command:
+        argv:
+          - systemctl
+          - get-default
+      changed_when: false
+
+    - name: Verify servera root disk is never an OBJ09 scratch target
+      ansible.builtin.assert:
+        that:
+          - "'/dev/vda' != '/dev/vdb'"
+        fail_msg: "OBJ09 scratch storage must never target /dev/vda."

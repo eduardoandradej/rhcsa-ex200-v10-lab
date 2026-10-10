@@ -1,0 +1,14 @@
+---
+id: obj09-06
+title: "Recuperação de acesso root pelo boot loader"
+title_en: "Recover root access from the boot loader"
+objective: "Objective 09 — Boot, GRUB & Recovery"
+target: [servera]
+difficulty: 5
+duration: 40
+compatibility:
+  local: "RHEL 9.8 manual graphical console"
+  target: "RHEL 10"
+  level: manual-console-rhel10-aligned
+reset_policy: manual-console
+status: manual-only

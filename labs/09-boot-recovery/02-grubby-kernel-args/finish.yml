@@ -1,0 +1,42 @@
+---
+- name: Finish obj09-02
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    lab_root: /home/student/rhcsa-lab/obj09-02
+    state_dir: /var/lib/rhcsa-lab/obj09-02
+    training_arg: systemd.show_status=1
+  tasks:
+    - name: Remove the training argument from all entries
+      ansible.builtin.command:
+        argv:
+          - grubby
+          - --update-kernel=ALL
+          - "--remove-args={{ training_arg }}"
+      failed_when: false
+      changed_when: true
+
+    - name: Read original argument state
+      ansible.builtin.slurp:
+        src: "{{ state_dir }}/arg-baseline"
+      register: arg_baseline
+      failed_when: false
+
+    - name: Restore the training argument if it existed before the lab
+      ansible.builtin.command:
+        argv:
+          - grubby
+          - --update-kernel=ALL
+          - "--args={{ training_arg }}"
+      when:
+        - arg_baseline.content is defined
+        - (arg_baseline.content | b64decode | trim) == "present"
+      changed_when: true
+
+    - ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ lab_root }}"
+        - "{{ state_dir }}"

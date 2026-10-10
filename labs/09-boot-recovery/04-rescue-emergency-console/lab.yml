@@ -1,0 +1,14 @@
+---
+id: obj09-04
+title: "Rescue e emergency pelo console"
+title_en: "Rescue and emergency boot from the console"
+objective: "Objective 09 — Boot, GRUB & Recovery"
+target: [servera]
+difficulty: 4
+duration: 30
+compatibility:
+  local: "RHEL 9.8 manual console"
+  target: "RHEL 10"
+  level: manual-console-rhel10-aligned
+reset_policy: manual-console
+status: manual-only

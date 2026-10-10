@@ -1,0 +1,14 @@
+---
+id: obj09-07
+title: "Desafio integrado de boot e recuperação"
+title_en: "Integrated boot and recovery challenge"
+objective: "Objective 09 — Boot, GRUB & Recovery"
+target: [servera]
+difficulty: 4
+duration: 35
+compatibility:
+  local: "RHEL 9.8"
+  target: "RHEL 10"
+  level: concept-and-state
+reset_policy: ansible
+status: ready

@@ -1,0 +1,14 @@
+---
+id: obj09-05
+title: "Diagnosticar e corrigir falha de fstab"
+title_en: "Diagnose and repair an fstab failure"
+objective: "Objective 09 — Boot, GRUB & Recovery"
+target: [servera]
+difficulty: 4
+duration: 28
+compatibility:
+  local: "RHEL 9.8"
+  target: "RHEL 10"
+  level: concept-and-state
+reset_policy: guarded-storage-reset
+status: ready

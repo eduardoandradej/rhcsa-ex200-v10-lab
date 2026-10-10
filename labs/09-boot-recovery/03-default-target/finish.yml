@@ -1,0 +1,22 @@
+---
+- name: Finish obj09-03
+  hosts: servera
+  gather_facts: false
+  become: true
+  vars:
+    state_dir: /var/lib/rhcsa-lab/obj09-03
+  tasks:
+    - name: Restore original default target
+      ansible.builtin.shell: |
+        if test -s "{{ state_dir }}/default-target"; then
+          systemctl set-default "$(cat "{{ state_dir }}/default-target")"
+        fi
+      changed_when: true
+      failed_when: false
+
+    - ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /home/student/rhcsa-lab/obj09-03
+        - "{{ state_dir }}"
