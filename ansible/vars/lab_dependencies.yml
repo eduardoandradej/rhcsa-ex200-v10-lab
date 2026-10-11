@@ -14,10 +14,19 @@ control_plane_packages:
   - man-db
   - man-pages
   - openssh-clients
+  - createrepo_c
 
 # Baseline das VMs de prática. A instalação é infraestrutura do laboratório,
 # não parte da resolução dos exercícios.
+#
+# O conjunto permanece completo porque vários labs dependem dessas ferramentas
+# e serviços. O bootstrap transfere os RPMs a partir do bastion e instala a
+# baseline sem depender dos repositórios remotos de servera/serverb.
 managed_baseline_packages:
+  - openssh-server
+  - openssh-clients
+  - python3
+  - sudo
   - bzip2
   - gzip
   - xz
@@ -25,7 +34,6 @@ managed_baseline_packages:
   - vim-enhanced
   - man-db
   - man-pages
-  - openssh-clients
   - rsync
   - tree
   - lsof
@@ -58,9 +66,15 @@ control_plane_required_commands:
   - xz
   - python3
   - dnf
+  - createrepo_c
 
 managed_required_commands:
+  - sshd
   - ssh
+  - python3
+  - sudo
+  - dnf
+  - rpm
   - tar
   - gzip
   - bzip2

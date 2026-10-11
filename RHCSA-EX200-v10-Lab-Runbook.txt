@@ -222,16 +222,16 @@ qemu-img info rhel-rhcsa-base-v1.qcow2
 BLOCO 5 - HOST KVM/LIBVIRT - PRESERVAR IMAGEM-MESTRE
 ======================================================================
 
-sudo mkdir -p /var/lib/libvirt/base-images
+sudo mkdir -p /var/lib/libvirt/repo-images
 
 sudo cp \
   ~/Downloads/rhel-rhcsa-base-v1.qcow2 \
-  /var/lib/libvirt/base-images/
+  /var/lib/libvirt/repo-images/
 
 sudo chmod 0444 \
-  /var/lib/libvirt/base-images/rhel-rhcsa-base-v1.qcow2
+  /var/lib/libvirt/repo-images/rhel-rhcsa-base-v1.qcow2
 
-BASE_IMAGE=/var/lib/libvirt/base-images/rhel-rhcsa-base-v1.qcow2
+BASE_IMAGE=/var/lib/libvirt/repo-images/rhel-rhcsa-base-v1.qcow2
 IMAGE_DIR=/var/lib/libvirt/images
 
 echo "$BASE_IMAGE"
@@ -353,15 +353,19 @@ BLOCO 8 - ABRIR OS CONSOLES
 # No host, use virt-manager, Cockpit ou virt-viewer.
 # Exemplos:
 
-virt-viewer --connect qemu:///system bastion &
-virt-viewer --connect qemu:///system servera &
-virt-viewer --connect qemu:///system serverb &
+sudo virsh console bastion
+sudo virsh console servera
+sudo virsh console serverb 
 
 # A partir daqui, execute cada bloco NO CONSOLE DA VM CORRESPONDENTE.
+
+Para sair da VM (Ctrl + ])
 
 ======================================================================
 BLOCO 9 - BASTION - IDENTIDADE, REDE E BASELINE
 ======================================================================
+# Do host KVM 
+sudo virsh console bastion
 
 # EXECUTAR DENTRO DO BASTION
 
@@ -409,6 +413,20 @@ sudo systemctl enable --now firewalld
 sudo firewall-cmd --permanent --add-service=ssh
 sudo firewall-cmd --reload
 
+Verifique os serviços, caso receba mensagem de "/etc/rc.d/rc.local is not marked executable, skipping.":
+sudo systemctl is-enabled sshd
+sudo systemctl is-active sshd
+
+sudo systemctl is-enabled firewalld
+sudo systemctl is-active firewalld
+
+O resultado esperado é:
+
+enabled
+active
+enabled
+active
+
 sudo setenforce 1 2>/dev/null || true
 sudo sed -ri 's/^[[:space:]]*SELINUX=.*/SELINUX=enforcing/' /etc/selinux/config
 
@@ -434,10 +452,38 @@ sudo dnf repolist
 # Se não houver repositório funcional, PARE aqui e configure RHSM ou DVD
 # conforme o manual antes de continuar.
 
-sudo dnf install -y \
+#Registar a conta RedHat
+
+sudo subscription-manager register
+
+# Habilitar BaseOS e AppStream
+
+sudo subscription-manager repos \
+  --enable=rhel-9-for-x86_64-baseos-rpms \
+  --enable=rhel-9-for-x86_64-appstream-rpms
+
+# Atualizar os repositórios
+
+sudo dnf clean all
+sudo dnf makecache
+sudo dnf repolist
+
+# Atualizar o RHEL 9
+
+sudo dnf update -y
+
+# Confirmar o registro
+
+sudo subscription-manager identity
+sudo subscription-manager status
+
+# Instalar as dependências
+
+ssudo dnf install -y \
   openssh-server \
   openssh-clients \
   python3 \
+  sudo \
   tar \
   gzip \
   bzip2 \
@@ -455,9 +501,16 @@ python3 -c 'import yaml; print("PyYAML OK")'
 
 ping -c 2 192.168.100.1
 
+Server Bastion - OK
+exit
+
+
 ======================================================================
 BLOCO 10 - SERVERA - IDENTIDADE, REDE E BASELINE
 ======================================================================
+# Do host KVM 
+
+sudo virsh console servera
 
 # EXECUTAR DENTRO DO SERVERA
 
@@ -505,6 +558,72 @@ sudo systemctl enable --now firewalld
 sudo firewall-cmd --permanent --add-service=ssh
 sudo firewall-cmd --reload
 
+# Verifique os serviços, caso receba mensagem de "/etc/rc.d/rc.local is not marked executable, skipping.":
+
+sudo systemctl is-enabled sshd
+sudo systemctl is-active sshd
+
+sudo systemctl is-enabled firewalld
+sudo systemctl is-active firewalld
+
+# O resultado esperado é:
+
+enabled
+active
+enabled
+active
+
+sudo setenforce 1 2>/dev/null || true
+sudo sed -ri 's/^[[:space:]]*SELINUX=.*/SELINUX=enforcing/' /etc/selinux/config
+
+hostname -f
+ip -4 -br address
+ip route
+getenforce
+systemctl is-active sshd
+systemctl is-active firewalld
+
+getent hosts bastion
+getent hosts servera
+getent hosts serverb
+
+cat /etc/machine-id
+sudo ssh-keygen -A
+sudo ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
+
+# Fonte de pacotes precisa estar funcional:
+
+sudo dnf repolist
+
+# Se não houver repositório funcional, PARE aqui e configure RHSM ou DVD
+# conforme o manual antes de continuar.
+
+#Registar a conta RedHat
+
+sudo subscription-manager register
+
+# Habilitar BaseOS e AppStream
+
+sudo subscription-manager repos \
+  --enable=rhel-9-for-x86_64-baseos-rpms \
+  --enable=rhel-9-for-x86_64-appstream-rpms
+
+# Atualizar os repositórios
+
+sudo dnf clean all
+sudo dnf makecache
+sudo dnf repolist
+
+# Atualizar o RHEL 9
+
+sudo dnf update -y
+sudo reboot
+
+# Confirmar o registro
+
+sudo subscription-manager identity
+sudo subscription-manager status
+
 sudo setenforce 1 2>/dev/null || true
 sudo sed -ri 's/^[[:space:]]*SELINUX=.*/SELINUX=enforcing/' /etc/selinux/config
 
@@ -517,12 +636,8 @@ sudo dnf install -y \
   openssh-server \
   openssh-clients \
   python3 \
-  tar \
-  gzip \
-  bzip2 \
-  xz \
-  unzip \
-  zip
+  sudo
+
 
 hostname -f
 ip -4 -br address
@@ -554,9 +669,14 @@ lsblk -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINTS
 # vdd = 3G
 # vde = 2G
 
+exit
+
 ======================================================================
 BLOCO 11 - SERVERB - IDENTIDADE, REDE E BASELINE
 ======================================================================
+# Do host KVM 
+
+sudo virsh console serverb
 
 # EXECUTAR DENTRO DO SERVERB
 
@@ -604,6 +724,73 @@ sudo systemctl enable --now firewalld
 sudo firewall-cmd --permanent --add-service=ssh
 sudo firewall-cmd --reload
 
+# Verifique os serviços, caso receba mensagem de "/etc/rc.d/rc.local is not marked executable, skipping.":
+
+sudo systemctl is-enabled sshd
+sudo systemctl is-active sshd
+
+sudo systemctl is-enabled firewalld
+sudo systemctl is-active firewalld
+
+# O resultado esperado é:
+
+enabled
+active
+enabled
+active
+
+sudo setenforce 1 2>/dev/null || true
+sudo sed -ri 's/^[[:space:]]*SELINUX=.*/SELINUX=enforcing/' /etc/selinux/config
+
+hostname -f
+ip -4 -br address
+ip route
+getenforce
+systemctl is-active sshd
+systemctl is-active firewalld
+
+getent hosts bastion
+getent hosts servera
+getent hosts serverb
+
+cat /etc/machine-id
+sudo ssh-keygen -A
+sudo ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
+
+# Fonte de pacotes precisa estar funcional:
+
+sudo dnf repolist
+
+# Se não houver repositório funcional, PARE aqui e configure RHSM ou DVD
+# conforme o manual antes de continuar.
+
+#Registar a conta RedHat
+
+sudo subscription-manager register
+
+# Habilitar BaseOS e AppStream
+
+sudo subscription-manager repos \
+  --enable=rhel-9-for-x86_64-baseos-rpms \
+  --enable=rhel-9-for-x86_64-appstream-rpms
+
+# Atualizar os repositórios
+
+sudo dnf clean all
+sudo dnf makecache
+sudo dnf repolist
+
+# Atualizar o RHEL 9
+
+sudo dnf update -y
+sudo reboot
+
+# Confirmar o registro
+
+sudo subscription-manager identity
+sudo subscription-manager status
+
+
 sudo setenforce 1 2>/dev/null || true
 sudo sed -ri 's/^[[:space:]]*SELINUX=.*/SELINUX=enforcing/' /etc/selinux/config
 
@@ -611,6 +798,8 @@ sudo ssh-keygen -A
 sudo systemctl restart sshd
 
 sudo dnf repolist
+
+# Instalar dependências 
 
 sudo dnf install -y \
   openssh-server \
@@ -647,6 +836,8 @@ lsblk -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINTS
 # vda = sistema
 # vdb = 5G
 # vdc = 3G
+
+exit
 
 ======================================================================
 BLOCO 12 - BASTION - VALIDAR REDE ENTRE AS VMS
@@ -843,66 +1034,76 @@ lab show obj01-01
 
 # Neste ponto o plano de controle deve estar funcional.
 
-======================================================================
-BLOCO 22 - HOST KVM/LIBVIRT - CRIAR BASELINE ANTES DOS ESTUDOS
-======================================================================
+# ==============================================================
+# BLOCO 22 - HOST KVM - SNAPSHOTS BASELINE
+# ==============================================================
 
-# VOLTE AO HOST KVM.
-# NÃO execute estes comandos no bastion.
+# Verificar os discos das VMs:
 
-sudo virsh -c qemu:///system domblklist servera
-sudo virsh -c qemu:///system domblklist serverb
+sudo virsh domblklist servera
+sudo virsh domblklist serverb
 
-sudo virsh -c qemu:///system snapshot-list servera
-sudo virsh -c qemu:///system snapshot-list serverb
+# Verificar snapshots existentes:
+
+sudo virsh snapshot-list servera
+sudo virsh snapshot-list serverb
 
 # Desligamento limpo:
 
-sudo virsh -c qemu:///system shutdown servera
-sudo virsh -c qemu:///system shutdown serverb
+sudo virsh shutdown servera
+sudo virsh shutdown serverb
 
 # Aguarde até ambos ficarem "shut off":
 
-watch -n 2 'sudo virsh -c qemu:///system list --all'
+watch -n 2 'sudo virsh list --all'
 
-# Saia do watch com Ctrl+C quando servera/serverb estiverem shut off.
+# Saia do watch com Ctrl+C quando ambos estiverem desligados.
 
-sudo virsh -c qemu:///system domstate servera
-sudo virsh -c qemu:///system domstate serverb
+sudo virsh domstate servera
+sudo virsh domstate serverb
 
 # Só prossiga se ambos mostrarem "shut off".
+# Confirme previamente que os formatos dos discos
+# suportam o tipo de snapshot pretendido.
 
-sudo virsh -c qemu:///system snapshot-create-as \
+# Criar snapshots:
+
+sudo virsh snapshot-create-as \
   servera \
   baseline-pre-labs \
   --description "Baseline RHCSA limpo antes dos laboratórios"
 
-sudo virsh -c qemu:///system snapshot-create-as \
+sudo virsh snapshot-create-as \
   serverb \
   baseline-pre-labs \
   --description "Baseline RHCSA limpo antes dos laboratórios"
 
-sudo virsh -c qemu:///system snapshot-info \
+# Consultar informações:
+
+sudo virsh snapshot-info \
   servera \
   baseline-pre-labs
 
-sudo virsh -c qemu:///system snapshot-info \
+sudo virsh snapshot-info \
   serverb \
   baseline-pre-labs
 
-sudo virsh -c qemu:///system snapshot-list servera
-sudo virsh -c qemu:///system snapshot-list serverb
+# Listar snapshots:
+
+sudo virsh snapshot-list servera
+sudo virsh snapshot-list serverb
 
 # Reiniciar os nós:
 
-sudo virsh -c qemu:///system start servera
-sudo virsh -c qemu:///system start serverb
+sudo virsh start servera
+sudo virsh start serverb
 
-sudo virsh -c qemu:///system list
+sudo virsh list
 
-======================================================================
-BLOCO 23 - BASTION - CHECK FINAL: AMBIENTE PRONTO PARA ESTUDAR
-======================================================================
+
+# ==============================================================
+# BLOCO 23 - BASTION - CHECK FINAL: AMBIENTE PRONTO PARA ESTUDAR
+# ==============================================================
 
 # VOLTE AO BASTION COMO student.
 
@@ -928,9 +1129,10 @@ lab show obj01-01
 
 # Se tudo estiver OK, o ambiente está pronto.
 
-======================================================================
-BLOCO 24 - PRIMEIRO COMANDO DE ESTUDO
-======================================================================
+
+# ==============================================================
+# BLOCO 24 - PRIMEIRO COMANDO DE ESTUDO
+# ==============================================================
 
 # Quando realmente quiser começar o primeiro exercício:
 
@@ -952,82 +1154,85 @@ lab finish
 
 lab show obj01-02
 
-======================================================================
-CHECAGEM FINAL RESUMIDA
-======================================================================
 
-HOST KVM:
-  [ ] KVM/libvirt funcionando
-  [ ] Cockpit funcionando
-  [ ] pool default ativo
-  [ ] rede rhcsa-lab ativa
-  [ ] bridge virbr-rhcsa = 192.168.100.1/24
-  [ ] bastion existe
-  [ ] servera existe
-  [ ] serverb existe
-  [ ] snapshot baseline-pre-labs em servera
-  [ ] snapshot baseline-pre-labs em serverb
+# ==============================================================
+# CHECAGEM FINAL RESUMIDA
+# ==============================================================
 
-BASTION:
-  [ ] bastion.lab.test
-  [ ] 192.168.100.10
-  [ ] Git
-  [ ] Ansible Core
-  [ ] Python 3 + PyYAML
-  [ ] chave ~/.ssh/id_ed25519_rhcsa_lab
-  [ ] SSH por chave para servera/serverb
-  [ ] projeto em ~/rhcsa-ex200-v10-lab
-  [ ] comando lab funcionando
+# HOST KVM:
+# [ ] KVM/libvirt funcionando
+# [ ] Cockpit funcionando
+# [ ] pool default ativo
+# [ ] rede rhcsa-lab ativa
+# [ ] bridge virbr-rhcsa = 192.168.100.1/24
+# [ ] bastion existe
+# [ ] servera existe
+# [ ] serverb existe
+# [ ] snapshot baseline-pre-labs em servera
+# [ ] snapshot baseline-pre-labs em serverb
 
-SERVERA:
-  [ ] servera.lab.test
-  [ ] 192.168.100.11
-  [ ] SELinux Enforcing
-  [ ] firewalld ativo
-  [ ] sshd ativo
-  [ ] student + sudo NOPASSWD
-  [ ] vda sistema
-  [ ] vdb 5G
-  [ ] vdc 5G
-  [ ] vdd 3G
-  [ ] vde 2G
+# BASTION:
+# [ ] bastion.lab.test
+# [ ] 192.168.100.10
+# [ ] Git
+# [ ] Ansible Core
+# [ ] Python 3 + PyYAML
+# [ ] chave ~/.ssh/id_ed25519_rhcsa_lab
+# [ ] SSH por chave para servera/serverb
+# [ ] projeto em ~/rhcsa-ex200-v10-lab
+# [ ] comando lab funcionando
 
-SERVERB:
-  [ ] serverb.lab.test
-  [ ] 192.168.100.12
-  [ ] SELinux Enforcing
-  [ ] firewalld ativo
-  [ ] sshd ativo
-  [ ] student + sudo NOPASSWD
-  [ ] vda sistema
-  [ ] vdb 5G
-  [ ] vdc 3G
+# SERVERA:
+# [ ] servera.lab.test
+# [ ] 192.168.100.11
+# [ ] SELinux Enforcing
+# [ ] firewalld ativo
+# [ ] sshd ativo
+# [ ] student + sudo NOPASSWD
+# [ ] vda sistema
+# [ ] vdb 5G
+# [ ] vdc 5G
+# [ ] vdd 3G
+# [ ] vde 2G
 
-VALIDAÇÃO FINAL:
-  [ ] ssh servera hostname -f
-  [ ] ssh serverb hostname -f
-  [ ] ansible all -m ansible.builtin.ping
-  [ ] ansible-playbook playbooks/validate.yml
-  [ ] bootstrap/20-install-dependencies.sh
-  [ ] lab status
-  [ ] lab list
-  [ ] lab show obj01-01
+# SERVERB:
+# [ ] serverb.lab.test
+# [ ] 192.168.100.12
+# [ ] SELinux Enforcing
+# [ ] firewalld ativo
+# [ ] sshd ativo
+# [ ] student + sudo NOPASSWD
+# [ ] vda sistema
+# [ ] vdb 5G
+# [ ] vdc 3G
 
-======================================================================
-ATALHO OPERACIONAL DEPOIS QUE O AMBIENTE JÁ ESTIVER PRONTO
-======================================================================
+# VALIDACAO FINAL:
+# [ ] ssh servera hostname -f
+# [ ] ssh serverb hostname -f
+# [ ] ansible all -m ansible.builtin.ping
+# [ ] ansible-playbook playbooks/validate.yml
+# [ ] bootstrap/20-install-dependencies.sh
+# [ ] lab status
+# [ ] lab list
+# [ ] lab show obj01-01
+
+
+# ==============================================================
+# ATALHO OPERACIONAL DEPOIS QUE O AMBIENTE JA ESTIVER PRONTO
+# ==============================================================
 
 # No host KVM:
 
-sudo virsh -c qemu:///system start bastion 2>/dev/null || true
-sudo virsh -c qemu:///system start servera 2>/dev/null || true
-sudo virsh -c qemu:///system start serverb 2>/dev/null || true
-sudo virsh -c qemu:///system list
+sudo virsh start bastion 2>/dev/null || true
+sudo virsh start servera 2>/dev/null || true
+sudo virsh start serverb 2>/dev/null || true
+sudo virsh list
 
 # No bastion:
 
 cd ~/rhcsa-ex200-v10-lab
 git pull --ff-only
+
 lab status
 lab list
 lab show obj01-01
@@ -1036,43 +1241,46 @@ lab show obj01-01
 
 lab start obj01-01
 
-======================================================================
-OBSERVAÇÕES IMPORTANTES
-======================================================================
 
-- O host KVM é infraestrutura fora de banda. Não use o bastion para controlar
-  snapshots/libvirt do host.
+# ==============================================================
+# OBSERVACOES IMPORTANTES
+# ==============================================================
 
-- bastion é o Control Plane. Não pratique exercícios destrutivos nele.
+# - O host KVM é infraestrutura fora de banda.
+#   Não use o bastion para controlar snapshots/libvirt do host.
 
-- servera e serverb são os nós descartáveis de estudo.
+# - bastion é o Control Plane.
+#   Não pratique exercícios destrutivos nele.
 
-- /dev/vda é o disco de sistema e deve ser tratado como protegido.
+# - servera e serverb são os nós descartáveis de estudo.
 
-- Os discos extras de servera/serverb existem justamente para os exercícios
-  de storage.
+# - /dev/vda é o disco de sistema e deve ser protegido.
 
-- Não desabilite SELinux.
+# - Os discos extras existem para exercícios de storage.
 
-- Não desabilite firewalld para contornar falhas.
+# - Não desabilite SELinux.
 
-- Não use StrictHostKeyChecking=no como correção permanente.
+# - Não desabilite firewalld para contornar falhas.
 
-- A chave SSH privada do laboratório deve permanecer apenas no bastion.
+# - Não use StrictHostKeyChecking=no como correção permanente.
 
-- O projeto Git não deve receber senhas, chaves privadas, tokens ou
-  credenciais RHSM.
+# - A chave SSH privada deve permanecer apenas no bastion.
 
-- Antes de cada sessão de estudo:
-    cd ~/rhcsa-ex200-v10-lab
-    git pull --ff-only
-    lab status
+# - Não envie senhas, chaves privadas, tokens ou
+#   credenciais RHSM ao repositório Git.
 
-- Fluxo normal de estudo:
-    lab show ID
-    lab start ID
-    resolver manualmente
-    lab grade
-    lab finish
+# - Antes de cada sessão de estudo:
+#     cd ~/rhcsa-ex200-v10-lab
+#     git pull --ff-only
+#     lab status
 
-FIM
+# - Fluxo normal de estudo:
+#     lab show ID
+#     lab start ID
+#     resolver manualmente
+#     lab grade
+#     lab finish
+
+# ==============================================================
+# FIM
+# ==============================================================

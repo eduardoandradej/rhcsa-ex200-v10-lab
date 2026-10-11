@@ -1,4 +1,3 @@
----
 - name: Prepare RHCSA lab dependency bundle on control plane
   hosts: control
   gather_facts: false
@@ -27,11 +26,12 @@
         state: directory
         mode: "0755"
 
-    - name: Download complete managed-node dependency bundle
+    - name: Download complete x86_64/noarch managed-node dependency bundle
       ansible.builtin.shell: >
         dnf -y download
         --resolve
         --alldeps
+        --arch=x86_64,noarch
         --destdir {{ bundle_dir }}
         {{ managed_baseline_packages | join(' ') }}
       args:
@@ -52,6 +52,42 @@
         fail_msg: >-
           No RPMs were downloaded. Verify the bastion local RHEL repositories
           before continuing.
+
+    - name: Detect unexpected i686 RPMs in dependency bundle
+      ansible.builtin.find:
+        paths: "{{ bundle_dir }}"
+        patterns: "*.i686.rpm"
+        file_type: file
+      register: i686_rpms
+
+    - name: Reject multilib i686 RPMs from the baseline bundle
+      ansible.builtin.assert:
+        that:
+          - i686_rpms.matched | int == 0
+        fail_msg: >-
+          Unexpected i686 RPMs were downloaded into the dependency bundle.
+          The RHCSA lab baseline is x86_64/noarch only. Review DNF architecture
+          resolution before continuing.
+
+    - name: Generate local RPM repository metadata
+      ansible.builtin.command:
+        argv:
+          - createrepo_c
+          - "{{ bundle_dir }}"
+      changed_when: true
+
+    - name: Verify local repository metadata
+      ansible.builtin.stat:
+        path: "{{ bundle_dir }}/repodata/repomd.xml"
+      register: local_repo_metadata
+
+    - name: Require local repository metadata
+      ansible.builtin.assert:
+        that:
+          - local_repo_metadata.stat.exists
+        fail_msg: >-
+          Local RPM repository metadata was not generated correctly on the
+          bastion.
 
 - name: Install RHCSA baseline dependencies on managed nodes
   hosts: managed
@@ -83,18 +119,48 @@
         dest: "{{ remote_bundle_dir }}/"
         mode: preserve
 
-    - name: Install baseline packages from local RPM bundle
+    - name: Detect unexpected i686 RPMs before installation
+      ansible.builtin.find:
+        paths: "{{ remote_bundle_dir }}"
+        patterns: "*.i686.rpm"
+        file_type: file
+      register: remote_i686_rpms
+
+    - name: Refuse installation if i686 RPMs are present
+      ansible.builtin.assert:
+        that:
+          - remote_i686_rpms.matched | int == 0
+        fail_msg: >-
+          Unexpected i686 RPMs are present in the managed-node dependency
+          bundle. Installation was stopped to keep the lab baseline
+          x86_64/noarch.
+
+    - name: Install baseline packages from local RPM repository
       ansible.builtin.shell: |
-        dnf -y \
-          --disablerepo='*' \
-          --setopt=install_weak_deps=False \
-          install {{ remote_bundle_dir }}/*.rpm
+        dnf -y --noplugins           --disablerepo='*'           --repofrompath=rhcsa-offline,file://{{ remote_bundle_dir }}           --enablerepo=rhcsa-offline           --setopt=install_weak_deps=False           install {{ managed_baseline_packages | join(' ') }}
       args:
         executable: /bin/bash
       register: baseline_install
       changed_when: >
         'Nothing to do.' not in baseline_install.stdout and
         'Nothing to do' not in baseline_install.stdout
+
+    - name: Verify no i686 packages were installed by bootstrap
+      ansible.builtin.shell: |
+        rpm -qa --qf '%{NAME}.%{ARCH}\n' | grep '\.i686$' || true
+      args:
+        executable: /bin/bash
+      register: installed_i686
+      changed_when: false
+
+    - name: Require x86_64/noarch managed-node baseline
+      ansible.builtin.assert:
+        that:
+          - installed_i686.stdout | trim | length == 0
+        fail_msg: >-
+          One or more i686 packages are installed on the managed node after
+          bootstrap. Review the package transaction before creating the
+          baseline snapshot.
 
     - name: Remove temporary RPM bundle from managed node
       ansible.builtin.file:
