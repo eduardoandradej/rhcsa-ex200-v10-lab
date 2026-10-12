@@ -1,0 +1,1286 @@
+RHCSA EX200 v10 LAB
+ROTINA COMPLETA DE CONSTRUÇÃO DO AMBIENTE
+=========================================
+
+Objetivo
+--------
+Reproduzir, do zero, o ambiente:
+
+GitHub
+  |
+  | clone / pull
+  v
+bastion.lab.test           192.168.100.10
+  |  Git / Ansible / lab
+  |
+  +---- SSH / Ansible ---- servera.lab.test  192.168.100.11
+  |
+  +---- SSH / Ansible ---- serverb.lab.test  192.168.100.12
+
+Rede libvirt:
+  rhcsa-lab
+  192.168.100.0/24
+  gateway 192.168.100.1
+  bridge virbr-rhcsa
+
+Host:
+  KVM/libvirt
+  snapshots/console
+
+Premissas desta rotina
+----------------------
+1. Host KVM principal: Ubuntu 24.04 Desktop.
+2. VMs: RHEL 9.8, alinhadas ao projeto atual.
+3. Método utilizado: imagem-base QCOW2.
+4. A imagem-base já foi baixada para ~/Downloads:
+     rhel-rhcsa-base-v1.qcow2
+     rhel-rhcsa-base-v1.qcow2.sha256
+5. A imagem-base possui aproximadamente 30 GiB de tamanho virtual.
+6. Usuário padrão do laboratório: student.
+7. Senha local de laboratório usada nesta rotina: redhat.
+8. Execute os comandos de cada bloco SOMENTE na máquina indicada.
+9. Não inicialize a imagem-base diretamente.
+10. Não crie filesystem/partições nos discos extras de servera/serverb.
+
+======================================================================
+BLOCO 1A - HOST UBUNTU 24.04/26.04 - PREPARAÇÃO
+======================================================================
+
+# EXECUTAR NO HOST UBUNTU 24.04
+
+hostnamectl
+lscpu
+free -h
+lsblk
+
+sudo apt update
+
+sudo apt install -y \
+  qemu-kvm \
+  qemu-utils \
+  libvirt-daemon-system \
+  libvirt-clients \
+  virtinst \
+  virt-manager \
+  virt-viewer \
+  cpu-checker \
+  libosinfo-bin \
+  cockpit \
+  cockpit-machines
+
+sudo systemctl enable --now libvirtd
+sudo systemctl enable --now cockpit.socket
+
+sudo usermod -aG kvm,libvirt "$USER"
+
+kvm-ok
+sudo virt-host-validate qemu
+sudo virsh -c qemu:///system list --all
+
+
+======================================================================
+BLOCO 1B - HOST RHEL 9 / ROCKY LINUX 9 / ALMALINUX 9 - PREPARAÇÃO
+======================================================================
+
+# EXECUTAR NO HOST RHEL 9 / ROCKY LINUX 9 / ALMALINUX 9
+
+hostnamectl
+lscpu
+free -h
+lsblk
+
+sudo dnf makecache
+sudo dnf update -y
+
+sudo dnf install -y \
+  qemu-kvm \
+  qemu-img \
+  libvirt \
+  libvirt-client \
+  virt-install \
+  virt-manager \
+  virt-viewer \
+  libosinfo \
+  osinfo-db-tools \
+  cockpit \
+  cockpit-machines
+
+sudo systemctl enable --now libvirtd
+sudo systemctl enable --now cockpit.socket
+
+sudo usermod -aG kvm,libvirt "$USER"
+
+egrep -c '(vmx|svm)' /proc/cpuinfo
+lsmod | grep kvm
+
+sudo virt-host-validate qemu
+sudo virsh -c qemu:///system list --all
+
+
+======================================================================
+APÓS EXECUTAR UM DOS CAMINHOS ACIMA
+======================================================================
+
+# Faça logout/login para aplicar os grupos kvm/libvirt.
+
+id
+
+# Validações comuns aos dois hosts:
+
+sudo virsh -c qemu:///system list --all
+sudo virsh -c qemu:///system net-list --all
+sudo virsh -c qemu:///system pool-list --all
+
+systemctl is-active cockpit.socket
+
+
+======================================================================
+PRÓXIMO PASSO
+======================================================================
+
+======================================================================
+BLOCO 2 - HOST KVM/LIBVIRT - POOL DE STORAGE
+======================================================================
+
+# Verifique primeiro:
+
+sudo virsh -c qemu:///system pool-list --all
+
+# Se o pool "default" JÁ existir, apenas tente ativá-lo:
+
+sudo virsh -c qemu:///system pool-start default 2>/dev/null || true
+sudo virsh -c qemu:///system pool-autostart default 2>/dev/null || true
+
+# Se o pool default NÃO existir, crie:
+
+sudo mkdir -p /var/lib/libvirt/images
+
+if ! sudo virsh -c qemu:///system pool-info default >/dev/null 2>&1; then
+  sudo virsh -c qemu:///system \
+    pool-define-as default dir \
+    --target /var/lib/libvirt/images
+
+  sudo virsh -c qemu:///system pool-start default
+  sudo virsh -c qemu:///system pool-autostart default
+fi
+
+sudo virsh -c qemu:///system pool-info default
+
+======================================================================
+BLOCO 3 - HOST KVM/LIBVIRT - REDE RHCSA-LAB
+======================================================================
+
+ip route
+sudo virsh -c qemu:///system net-list --all
+
+# Só crie se rhcsa-lab ainda não existir.
+
+if ! sudo virsh -c qemu:///system net-info rhcsa-lab >/dev/null 2>&1; then
+
+cat > /tmp/rhcsa-lab.xml <<'XML'
+<network>
+  <name>rhcsa-lab</name>
+  <forward mode='nat'/>
+  <bridge name='virbr-rhcsa' stp='on' delay='0'/>
+  <domain name='lab.test'/>
+  <ip address='192.168.100.1' netmask='255.255.255.0'>
+    <dhcp>
+      <range start='192.168.100.100' end='192.168.100.199'/>
+    </dhcp>
+  </ip>
+</network>
+XML
+
+  sudo virsh -c qemu:///system net-define /tmp/rhcsa-lab.xml
+  sudo virsh -c qemu:///system net-start rhcsa-lab
+  sudo virsh -c qemu:///system net-autostart rhcsa-lab
+fi
+
+sudo virsh -c qemu:///system net-info rhcsa-lab
+sudo virsh -c qemu:///system net-dumpxml rhcsa-lab
+ip -br addr show virbr-rhcsa
+
+# Esperado:
+# virbr-rhcsa com 192.168.100.1/24
+
+======================================================================
+BLOCO 4 - HOST KVM/LIBVIRT - VALIDAR IMAGEM-BASE
+======================================================================
+
+cd ~/Downloads
+
+ls -lh rhel-rhcsa-base-v1.qcow2*
+sha256sum -c rhel-rhcsa-base-v1.qcow2.sha256
+
+qemu-img check rhel-rhcsa-base-v1.qcow2
+qemu-img info rhel-rhcsa-base-v1.qcow2
+
+# O checksum deve retornar OK.
+# qemu-img check deve informar que não encontrou erros.
+
+======================================================================
+BLOCO 5 - HOST KVM/LIBVIRT - PRESERVAR IMAGEM-MESTRE
+======================================================================
+
+sudo mkdir -p /var/lib/libvirt/repo-images
+
+sudo cp \
+  ~/Downloads/rhel-rhcsa-base-v1.qcow2 \
+  /var/lib/libvirt/repo-images/
+
+sudo chmod 0444 \
+  /var/lib/libvirt/repo-images/rhel-rhcsa-base-v1.qcow2
+
+BASE_IMAGE=/var/lib/libvirt/repo-images/rhel-rhcsa-base-v1.qcow2
+IMAGE_DIR=/var/lib/libvirt/images
+
+echo "$BASE_IMAGE"
+echo "$IMAGE_DIR"
+
+sudo qemu-img check "$BASE_IMAGE"
+
+======================================================================
+BLOCO 6 - HOST KVM/LIBVIRT - CRIAR DISCOS DAS VMS
+======================================================================
+
+# Antes, confirme que não existem VMs antigas com os mesmos nomes:
+
+sudo virsh -c qemu:///system list --all
+
+# Cópias completas e independentes da imagem-base:
+
+sudo qemu-img convert -p -O qcow2 \
+  "$BASE_IMAGE" \
+  "$IMAGE_DIR/bastion.qcow2"
+
+sudo qemu-img convert -p -O qcow2 \
+  "$BASE_IMAGE" \
+  "$IMAGE_DIR/servera.qcow2"
+
+sudo qemu-img convert -p -O qcow2 \
+  "$BASE_IMAGE" \
+  "$IMAGE_DIR/serverb.qcow2"
+
+# Discos extras do servera:
+
+sudo qemu-img create -f qcow2 "$IMAGE_DIR/servera-vdb.qcow2" 5G
+sudo qemu-img create -f qcow2 "$IMAGE_DIR/servera-vdc.qcow2" 5G
+sudo qemu-img create -f qcow2 "$IMAGE_DIR/servera-vdd.qcow2" 3G
+sudo qemu-img create -f qcow2 "$IMAGE_DIR/servera-vde.qcow2" 2G
+
+# Discos extras do serverb:
+
+sudo qemu-img create -f qcow2 "$IMAGE_DIR/serverb-vdb.qcow2" 5G
+sudo qemu-img create -f qcow2 "$IMAGE_DIR/serverb-vdc.qcow2" 3G
+
+sudo virsh -c qemu:///system pool-refresh default
+
+sudo qemu-img check "$IMAGE_DIR/bastion.qcow2"
+sudo qemu-img check "$IMAGE_DIR/servera.qcow2"
+sudo qemu-img check "$IMAGE_DIR/serverb.qcow2"
+
+======================================================================
+BLOCO 7 - HOST KVM/LIBVIRT - CRIAR AS 3 VMS
+======================================================================
+
+# BASTION
+
+sudo virt-install \
+  --connect qemu:///system \
+  --name bastion \
+  --memory 2048 \
+  --vcpus 2 \
+  --cpu host \
+  --osinfo detect=on,require=off \
+  --disk path="$IMAGE_DIR/bastion.qcow2",format=qcow2,bus=virtio \
+  --network network=rhcsa-lab,model=virtio \
+  --import \
+  --graphics vnc,listen=127.0.0.1 \
+  --noautoconsole
+
+# SERVERA
+
+sudo virt-install \
+  --connect qemu:///system \
+  --name servera \
+  --memory 3072 \
+  --vcpus 2 \
+  --cpu host \
+  --osinfo detect=on,require=off \
+  --disk path="$IMAGE_DIR/servera.qcow2",format=qcow2,bus=virtio \
+  --disk path="$IMAGE_DIR/servera-vdb.qcow2",format=qcow2,bus=virtio \
+  --disk path="$IMAGE_DIR/servera-vdc.qcow2",format=qcow2,bus=virtio \
+  --disk path="$IMAGE_DIR/servera-vdd.qcow2",format=qcow2,bus=virtio \
+  --disk path="$IMAGE_DIR/servera-vde.qcow2",format=qcow2,bus=virtio \
+  --network network=rhcsa-lab,model=virtio \
+  --import \
+  --graphics vnc,listen=127.0.0.1 \
+  --noautoconsole
+
+# SERVERB
+
+sudo virt-install \
+  --connect qemu:///system \
+  --name serverb \
+  --memory 2048 \
+  --vcpus 2 \
+  --cpu host \
+  --osinfo detect=on,require=off \
+  --disk path="$IMAGE_DIR/serverb.qcow2",format=qcow2,bus=virtio \
+  --disk path="$IMAGE_DIR/serverb-vdb.qcow2",format=qcow2,bus=virtio \
+  --disk path="$IMAGE_DIR/serverb-vdc.qcow2",format=qcow2,bus=virtio \
+  --network network=rhcsa-lab,model=virtio \
+  --import \
+  --graphics vnc,listen=127.0.0.1 \
+  --noautoconsole
+
+# Validar:
+
+sudo virsh -c qemu:///system list --all
+
+sudo virsh -c qemu:///system domblklist bastion
+sudo virsh -c qemu:///system domblklist servera
+sudo virsh -c qemu:///system domblklist serverb
+
+sudo virsh -c qemu:///system domiflist bastion
+sudo virsh -c qemu:///system domiflist servera
+sudo virsh -c qemu:///system domiflist serverb
+
+======================================================================
+BLOCO 8 - ABRIR OS CONSOLES
+======================================================================
+
+# No host, use virt-manager, Cockpit ou virt-viewer.
+# Exemplos:
+
+sudo virsh console bastion
+sudo virsh console servera
+sudo virsh console serverb 
+
+# A partir daqui, execute cada bloco NO CONSOLE DA VM CORRESPONDENTE.
+
+Para sair da VM (Ctrl + ])
+
+======================================================================
+BLOCO 9 - BASTION - IDENTIDADE, REDE E BASELINE
+======================================================================
+# Do host KVM 
+sudo virsh console bastion
+
+# EXECUTAR DENTRO DO BASTION
+
+sudo hostnamectl set-hostname bastion.lab.test
+
+IFACE="$(nmcli -t -f DEVICE,TYPE,STATE device | awk -F: '$2=="ethernet" && $3=="connected"{print $1; exit}')"
+LAB_CONNECTION="$(nmcli -g GENERAL.CONNECTION device show "$IFACE")"
+
+echo "IFACE=$IFACE"
+echo "LAB_CONNECTION=$LAB_CONNECTION"
+
+sudo nmcli connection modify "$LAB_CONNECTION" \
+  ipv4.method manual \
+  ipv4.addresses 192.168.100.10/24 \
+  ipv4.gateway 192.168.100.1 \
+  ipv4.dns 192.168.100.1 \
+  ipv4.dns-search lab.test \
+  connection.autoconnect yes
+
+sudo nmcli connection up "$LAB_CONNECTION"
+
+sudo sed -i '/# RHCSA-LAB START/,/# RHCSA-LAB END/d' /etc/hosts
+
+cat <<'EOF' | sudo tee -a /etc/hosts
+# RHCSA-LAB START
+192.168.100.10 bastion.lab.test bastion
+192.168.100.11 servera.lab.test servera
+192.168.100.12 serverb.lab.test serverb
+# RHCSA-LAB END
+EOF
+
+id student >/dev/null 2>&1 || sudo useradd -m -G wheel student
+sudo usermod -aG wheel student
+echo 'student:redhat' | sudo chpasswd
+
+echo 'student ALL=(ALL) NOPASSWD: ALL' | \
+  sudo tee /etc/sudoers.d/rhcsa-lab-student >/dev/null
+
+sudo chmod 440 /etc/sudoers.d/rhcsa-lab-student
+sudo visudo -cf /etc/sudoers.d/rhcsa-lab-student
+
+sudo systemctl enable --now sshd
+sudo systemctl enable --now firewalld
+
+sudo firewall-cmd --permanent --add-service=ssh
+sudo firewall-cmd --reload
+
+Verifique os serviços, caso receba mensagem de "/etc/rc.d/rc.local is not marked executable, skipping.":
+sudo systemctl is-enabled sshd
+sudo systemctl is-active sshd
+
+sudo systemctl is-enabled firewalld
+sudo systemctl is-active firewalld
+
+O resultado esperado é:
+
+enabled
+active
+enabled
+active
+
+sudo setenforce 1 2>/dev/null || true
+sudo sed -ri 's/^[[:space:]]*SELINUX=.*/SELINUX=enforcing/' /etc/selinux/config
+
+hostname -f
+ip -4 -br address
+ip route
+getenforce
+systemctl is-active sshd
+systemctl is-active firewalld
+
+getent hosts bastion
+getent hosts servera
+getent hosts serverb
+
+cat /etc/machine-id
+sudo ssh-keygen -A
+sudo ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
+
+# Fonte de pacotes precisa estar funcional:
+
+sudo dnf repolist
+
+# Se não houver repositório funcional, PARE aqui e configure RHSM ou DVD
+# conforme o manual antes de continuar.
+
+#Registar a conta RedHat
+
+sudo subscription-manager register
+
+# Habilitar BaseOS e AppStream
+
+sudo subscription-manager repos \
+  --enable=rhel-9-for-x86_64-baseos-rpms \
+  --enable=rhel-9-for-x86_64-appstream-rpms
+
+# Atualizar os repositórios
+
+sudo dnf clean all
+sudo dnf makecache
+sudo dnf repolist
+
+# Atualizar o RHEL 9
+
+sudo dnf update -y
+
+# Confirmar o registro
+
+sudo subscription-manager identity
+sudo subscription-manager status
+
+# Instalar as dependências
+
+ssudo dnf install -y \
+  openssh-server \
+  openssh-clients \
+  python3 \
+  sudo \
+  tar \
+  gzip \
+  bzip2 \
+  xz \
+  unzip \
+  zip \
+  git \
+  ansible-core \
+  python3-pyyaml
+
+python3 --version
+git --version
+ansible --version
+python3 -c 'import yaml; print("PyYAML OK")'
+
+ping -c 2 192.168.100.1
+
+Server Bastion - OK
+exit
+
+
+======================================================================
+BLOCO 10 - SERVERA - IDENTIDADE, REDE E BASELINE
+======================================================================
+# Do host KVM 
+
+sudo virsh console servera
+
+# EXECUTAR DENTRO DO SERVERA
+
+sudo hostnamectl set-hostname servera.lab.test
+
+IFACE="$(nmcli -t -f DEVICE,TYPE,STATE device | awk -F: '$2=="ethernet" && $3=="connected"{print $1; exit}')"
+LAB_CONNECTION="$(nmcli -g GENERAL.CONNECTION device show "$IFACE")"
+
+echo "IFACE=$IFACE"
+echo "LAB_CONNECTION=$LAB_CONNECTION"
+
+sudo nmcli connection modify "$LAB_CONNECTION" \
+  ipv4.method manual \
+  ipv4.addresses 192.168.100.11/24 \
+  ipv4.gateway 192.168.100.1 \
+  ipv4.dns 192.168.100.1 \
+  ipv4.dns-search lab.test \
+  connection.autoconnect yes
+
+sudo nmcli connection up "$LAB_CONNECTION"
+
+sudo sed -i '/# RHCSA-LAB START/,/# RHCSA-LAB END/d' /etc/hosts
+
+cat <<'EOF' | sudo tee -a /etc/hosts
+# RHCSA-LAB START
+192.168.100.10 bastion.lab.test bastion
+192.168.100.11 servera.lab.test servera
+192.168.100.12 serverb.lab.test serverb
+# RHCSA-LAB END
+EOF
+
+id student >/dev/null 2>&1 || sudo useradd -m -G wheel student
+sudo usermod -aG wheel student
+echo 'student:redhat' | sudo chpasswd
+
+echo 'student ALL=(ALL) NOPASSWD: ALL' | \
+  sudo tee /etc/sudoers.d/rhcsa-lab-student >/dev/null
+
+sudo chmod 440 /etc/sudoers.d/rhcsa-lab-student
+sudo visudo -cf /etc/sudoers.d/rhcsa-lab-student
+
+sudo systemctl enable --now sshd
+sudo systemctl enable --now firewalld
+
+sudo firewall-cmd --permanent --add-service=ssh
+sudo firewall-cmd --reload
+
+# Verifique os serviços, caso receba mensagem de "/etc/rc.d/rc.local is not marked executable, skipping.":
+
+sudo systemctl is-enabled sshd
+sudo systemctl is-active sshd
+
+sudo systemctl is-enabled firewalld
+sudo systemctl is-active firewalld
+
+# O resultado esperado é:
+
+enabled
+active
+enabled
+active
+
+sudo setenforce 1 2>/dev/null || true
+sudo sed -ri 's/^[[:space:]]*SELINUX=.*/SELINUX=enforcing/' /etc/selinux/config
+
+hostname -f
+ip -4 -br address
+ip route
+getenforce
+systemctl is-active sshd
+systemctl is-active firewalld
+
+getent hosts bastion
+getent hosts servera
+getent hosts serverb
+
+cat /etc/machine-id
+sudo ssh-keygen -A
+sudo ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
+
+# Fonte de pacotes precisa estar funcional:
+
+sudo dnf repolist
+
+# Se não houver repositório funcional, PARE aqui e configure RHSM ou DVD
+# conforme o manual antes de continuar.
+
+#Registar a conta RedHat
+
+sudo subscription-manager register
+
+# Habilitar BaseOS e AppStream
+
+sudo subscription-manager repos \
+  --enable=rhel-9-for-x86_64-baseos-rpms \
+  --enable=rhel-9-for-x86_64-appstream-rpms
+
+# Atualizar os repositórios
+
+sudo dnf clean all
+sudo dnf makecache
+sudo dnf repolist
+
+# Atualizar o RHEL 9
+
+sudo dnf update -y
+sudo reboot
+
+# Confirmar o registro
+
+sudo subscription-manager identity
+sudo subscription-manager status
+
+sudo setenforce 1 2>/dev/null || true
+sudo sed -ri 's/^[[:space:]]*SELINUX=.*/SELINUX=enforcing/' /etc/selinux/config
+
+sudo ssh-keygen -A
+sudo systemctl restart sshd
+
+sudo dnf repolist
+
+sudo dnf install -y \
+  openssh-server \
+  openssh-clients \
+  python3 \
+  sudo
+
+
+hostname -f
+ip -4 -br address
+ip route
+getenforce
+systemctl is-active sshd
+systemctl is-active firewalld
+cat /etc/machine-id
+
+sudo ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
+
+getent hosts bastion
+getent hosts servera
+getent hosts serverb
+
+ping -c 2 192.168.100.1
+ping -c 2 bastion
+ping -c 2 serverb
+
+# IMPORTANTE:
+# Verifique os discos. NÃO particione nem formate os discos extras agora.
+
+lsblk -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINTS
+
+# Esperado:
+# vda = sistema
+# vdb = 5G
+# vdc = 5G
+# vdd = 3G
+# vde = 2G
+
+exit
+
+======================================================================
+BLOCO 11 - SERVERB - IDENTIDADE, REDE E BASELINE
+======================================================================
+# Do host KVM 
+
+sudo virsh console serverb
+
+# EXECUTAR DENTRO DO SERVERB
+
+sudo hostnamectl set-hostname serverb.lab.test
+
+IFACE="$(nmcli -t -f DEVICE,TYPE,STATE device | awk -F: '$2=="ethernet" && $3=="connected"{print $1; exit}')"
+LAB_CONNECTION="$(nmcli -g GENERAL.CONNECTION device show "$IFACE")"
+
+echo "IFACE=$IFACE"
+echo "LAB_CONNECTION=$LAB_CONNECTION"
+
+sudo nmcli connection modify "$LAB_CONNECTION" \
+  ipv4.method manual \
+  ipv4.addresses 192.168.100.12/24 \
+  ipv4.gateway 192.168.100.1 \
+  ipv4.dns 192.168.100.1 \
+  ipv4.dns-search lab.test \
+  connection.autoconnect yes
+
+sudo nmcli connection up "$LAB_CONNECTION"
+
+sudo sed -i '/# RHCSA-LAB START/,/# RHCSA-LAB END/d' /etc/hosts
+
+cat <<'EOF' | sudo tee -a /etc/hosts
+# RHCSA-LAB START
+192.168.100.10 bastion.lab.test bastion
+192.168.100.11 servera.lab.test servera
+192.168.100.12 serverb.lab.test serverb
+# RHCSA-LAB END
+EOF
+
+id student >/dev/null 2>&1 || sudo useradd -m -G wheel student
+sudo usermod -aG wheel student
+echo 'student:redhat' | sudo chpasswd
+
+echo 'student ALL=(ALL) NOPASSWD: ALL' | \
+  sudo tee /etc/sudoers.d/rhcsa-lab-student >/dev/null
+
+sudo chmod 440 /etc/sudoers.d/rhcsa-lab-student
+sudo visudo -cf /etc/sudoers.d/rhcsa-lab-student
+
+sudo systemctl enable --now sshd
+sudo systemctl enable --now firewalld
+
+sudo firewall-cmd --permanent --add-service=ssh
+sudo firewall-cmd --reload
+
+# Verifique os serviços, caso receba mensagem de "/etc/rc.d/rc.local is not marked executable, skipping.":
+
+sudo systemctl is-enabled sshd
+sudo systemctl is-active sshd
+
+sudo systemctl is-enabled firewalld
+sudo systemctl is-active firewalld
+
+# O resultado esperado é:
+
+enabled
+active
+enabled
+active
+
+sudo setenforce 1 2>/dev/null || true
+sudo sed -ri 's/^[[:space:]]*SELINUX=.*/SELINUX=enforcing/' /etc/selinux/config
+
+hostname -f
+ip -4 -br address
+ip route
+getenforce
+systemctl is-active sshd
+systemctl is-active firewalld
+
+getent hosts bastion
+getent hosts servera
+getent hosts serverb
+
+cat /etc/machine-id
+sudo ssh-keygen -A
+sudo ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
+
+# Fonte de pacotes precisa estar funcional:
+
+sudo dnf repolist
+
+# Se não houver repositório funcional, PARE aqui e configure RHSM ou DVD
+# conforme o manual antes de continuar.
+
+#Registar a conta RedHat
+
+sudo subscription-manager register
+
+# Habilitar BaseOS e AppStream
+
+sudo subscription-manager repos \
+  --enable=rhel-9-for-x86_64-baseos-rpms \
+  --enable=rhel-9-for-x86_64-appstream-rpms
+
+# Atualizar os repositórios
+
+sudo dnf clean all
+sudo dnf makecache
+sudo dnf repolist
+
+# Atualizar o RHEL 9
+
+sudo dnf update -y
+sudo reboot
+
+# Confirmar o registro
+
+sudo subscription-manager identity
+sudo subscription-manager status
+
+
+sudo setenforce 1 2>/dev/null || true
+sudo sed -ri 's/^[[:space:]]*SELINUX=.*/SELINUX=enforcing/' /etc/selinux/config
+
+sudo ssh-keygen -A
+sudo systemctl restart sshd
+
+sudo dnf repolist
+
+# Instalar dependências 
+
+sudo dnf install -y \
+  openssh-server \
+  openssh-clients \
+  python3 \
+  tar \
+  gzip \
+  bzip2 \
+  xz \
+  unzip \
+  zip
+
+hostname -f
+ip -4 -br address
+ip route
+getenforce
+systemctl is-active sshd
+systemctl is-active firewalld
+cat /etc/machine-id
+
+sudo ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
+
+getent hosts bastion
+getent hosts servera
+getent hosts serverb
+
+ping -c 2 192.168.100.1
+ping -c 2 bastion
+ping -c 2 servera
+
+lsblk -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINTS
+
+# Esperado:
+# vda = sistema
+# vdb = 5G
+# vdc = 3G
+
+exit
+
+======================================================================
+BLOCO 12 - BASTION - VALIDAR REDE ENTRE AS VMS
+======================================================================
+
+# VOLTE AO BASTION COMO student
+
+hostname -f
+id -un
+
+getent hosts servera
+getent hosts serverb
+
+ping -c 2 servera
+ping -c 2 serverb
+
+timeout 5 bash -c '</dev/tcp/servera/22' && echo "servera: SSH OK"
+timeout 5 bash -c '</dev/tcp/serverb/22' && echo "serverb: SSH OK"
+
+======================================================================
+BLOCO 13 - BASTION - CRIAR CHAVE SSH DO LAB
+======================================================================
+
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+
+# Chave dedicada apenas ao laboratório.
+# -N '' = sem passphrase para permitir automação não interativa no lab local.
+
+ssh-keygen \
+  -t ed25519 \
+  -f ~/.ssh/id_ed25519_rhcsa_lab \
+  -N '' \
+  -C 'rhcsa-lab'
+
+chmod 600 ~/.ssh/id_ed25519_rhcsa_lab
+chmod 644 ~/.ssh/id_ed25519_rhcsa_lab.pub
+
+ssh-keygen -lf ~/.ssh/id_ed25519_rhcsa_lab.pub
+
+======================================================================
+BLOCO 14 - SERVERA E SERVERB - CONFERIR FINGERPRINTS SSH
+======================================================================
+
+# NO CONSOLE DO SERVERA:
+
+sudo ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
+
+# ANOTE O RESULTADO.
+
+# NO CONSOLE DO SERVERB:
+
+sudo ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
+
+# ANOTE O RESULTADO.
+# As fingerprints de servera e serverb devem ser diferentes.
+
+======================================================================
+BLOCO 15 - BASTION - COPIAR CHAVE SSH PARA OS NÓS
+======================================================================
+
+# VOLTE AO BASTION.
+
+# Na primeira conexão, COMPARE a fingerprint mostrada com a obtida
+# diretamente no console de cada servidor.
+
+ssh-copy-id \
+  -i ~/.ssh/id_ed25519_rhcsa_lab.pub \
+  student@servera
+
+# Senha do laboratório:
+# redhat
+
+ssh-copy-id \
+  -i ~/.ssh/id_ed25519_rhcsa_lab.pub \
+  student@serverb
+
+# Senha do laboratório:
+# redhat
+
+======================================================================
+BLOCO 16 - BASTION - CONFIGURAÇÃO SSH
+======================================================================
+
+cat > ~/.ssh/config <<'EOF'
+Host servera
+    HostName 192.168.100.11
+    User student
+    IdentityFile ~/.ssh/id_ed25519_rhcsa_lab
+    IdentitiesOnly yes
+
+Host serverb
+    HostName 192.168.100.12
+    User student
+    IdentityFile ~/.ssh/id_ed25519_rhcsa_lab
+    IdentitiesOnly yes
+EOF
+
+chmod 600 ~/.ssh/config
+
+ssh servera hostname -f
+ssh serverb hostname -f
+
+ssh -o BatchMode=yes servera 'sudo -n true' \
+  && echo "servera: SSH + sudo OK"
+
+ssh -o BatchMode=yes serverb 'sudo -n true' \
+  && echo "serverb: SSH + sudo OK"
+
+sudo -n true \
+  && echo "bastion: sudo OK"
+
+======================================================================
+BLOCO 17 - BASTION - CLONAR O PROJETO DO GITHUB
+======================================================================
+
+# A clonagem fica na reta final porque rede, DNS, SSH e sudo já estão prontos.
+
+cd ~
+
+# Se o diretório já existir, NÃO clone por cima.
+test ! -e ~/rhcsa-ex200-v10-lab
+
+git clone \
+  https://github.com/eduardoandradej/rhcsa-ex200-v10-lab.git
+
+cd ~/rhcsa-ex200-v10-lab
+
+git status
+git log -1 --oneline --decorate
+git describe --tags --always
+
+======================================================================
+BLOCO 18 - BASTION - INSTALAR O CLI "lab"
+======================================================================
+
+cd ~/rhcsa-ex200-v10-lab
+
+bash bootstrap/10-install-lab-cli.sh
+
+source ~/.bashrc
+
+command -v lab
+lab --version
+
+======================================================================
+BLOCO 19 - BASTION - VALIDAR ANSIBLE
+======================================================================
+
+cd ~/rhcsa-ex200-v10-lab/ansible
+
+ansible --version
+ansible-config dump --only-changed
+
+ansible-inventory --graph
+
+ansible control -m ansible.builtin.ping
+ansible managed -m ansible.builtin.ping
+ansible all -m ansible.builtin.ping
+
+# Todos devem retornar SUCCESS/pong.
+
+======================================================================
+BLOCO 20 - BASTION - INSTALAR/VALIDAR DEPENDÊNCIAS DOS LABS
+======================================================================
+
+cd ~/rhcsa-ex200-v10-lab
+
+bash bootstrap/20-install-dependencies.sh
+
+# Depois faça novamente as validações explícitas:
+
+cd ~/rhcsa-ex200-v10-lab/ansible
+
+ansible all -m ansible.builtin.ping
+
+ansible-playbook playbooks/validate.yml
+
+ansible-playbook playbooks/00-validate-dependencies.yml
+
+======================================================================
+BLOCO 21 - BASTION - VALIDAR O CLI E O CATÁLOGO
+======================================================================
+
+cd ~/rhcsa-ex200-v10-lab
+
+lab status
+
+lab list
+
+lab list --objective obj01
+
+lab show obj01-01
+
+# Neste ponto o plano de controle deve estar funcional.
+
+# ==============================================================
+# BLOCO 22 - HOST KVM - SNAPSHOTS BASELINE
+# ==============================================================
+
+# Verificar os discos das VMs:
+
+sudo virsh domblklist servera
+sudo virsh domblklist serverb
+
+# Verificar snapshots existentes:
+
+sudo virsh snapshot-list servera
+sudo virsh snapshot-list serverb
+
+# Desligamento limpo:
+
+sudo virsh shutdown servera
+sudo virsh shutdown serverb
+
+# Aguarde até ambos ficarem "shut off":
+
+watch -n 2 'sudo virsh list --all'
+
+# Saia do watch com Ctrl+C quando ambos estiverem desligados.
+
+sudo virsh domstate servera
+sudo virsh domstate serverb
+
+# Só prossiga se ambos mostrarem "shut off".
+# Confirme previamente que os formatos dos discos
+# suportam o tipo de snapshot pretendido.
+
+# Criar snapshots:
+
+sudo virsh snapshot-create-as \
+  servera \
+  baseline-pre-labs \
+  --description "Baseline RHCSA limpo antes dos laboratórios"
+
+sudo virsh snapshot-create-as \
+  serverb \
+  baseline-pre-labs \
+  --description "Baseline RHCSA limpo antes dos laboratórios"
+
+# Consultar informações:
+
+sudo virsh snapshot-info \
+  servera \
+  baseline-pre-labs
+
+sudo virsh snapshot-info \
+  serverb \
+  baseline-pre-labs
+
+# Listar snapshots:
+
+sudo virsh snapshot-list servera
+sudo virsh snapshot-list serverb
+
+# Reiniciar os nós:
+
+sudo virsh start servera
+sudo virsh start serverb
+
+sudo virsh list
+
+
+# ==============================================================
+# BLOCO 23 - BASTION - CHECK FINAL: AMBIENTE PRONTO PARA ESTUDAR
+# ==============================================================
+
+# VOLTE AO BASTION COMO student.
+
+ssh -o BatchMode=yes \
+  -o ConnectTimeout=5 \
+  servera \
+  hostname -f
+
+ssh -o BatchMode=yes \
+  -o ConnectTimeout=5 \
+  serverb \
+  hostname -f
+
+cd ~/rhcsa-ex200-v10-lab/ansible
+
+ansible all -m ansible.builtin.ping
+
+cd ~/rhcsa-ex200-v10-lab
+
+lab status
+lab list --objective obj01
+lab show obj01-01
+
+# Se tudo estiver OK, o ambiente está pronto.
+
+
+# ==============================================================
+# BLOCO 24 - PRIMEIRO COMANDO DE ESTUDO
+# ==============================================================
+
+# Quando realmente quiser começar o primeiro exercício:
+
+cd ~/rhcsa-ex200-v10-lab
+
+lab start obj01-01
+
+# Leia a tarefa.
+# Resolva MANUALMENTE.
+# Depois avalie:
+
+lab grade
+
+# Ao concluir:
+
+lab finish
+
+# Próximo exercício:
+
+lab show obj01-02
+
+
+# ==============================================================
+# CHECAGEM FINAL RESUMIDA
+# ==============================================================
+
+# HOST KVM:
+# [ ] KVM/libvirt funcionando
+# [ ] Cockpit funcionando
+# [ ] pool default ativo
+# [ ] rede rhcsa-lab ativa
+# [ ] bridge virbr-rhcsa = 192.168.100.1/24
+# [ ] bastion existe
+# [ ] servera existe
+# [ ] serverb existe
+# [ ] snapshot baseline-pre-labs em servera
+# [ ] snapshot baseline-pre-labs em serverb
+
+# BASTION:
+# [ ] bastion.lab.test
+# [ ] 192.168.100.10
+# [ ] Git
+# [ ] Ansible Core
+# [ ] Python 3 + PyYAML
+# [ ] chave ~/.ssh/id_ed25519_rhcsa_lab
+# [ ] SSH por chave para servera/serverb
+# [ ] projeto em ~/rhcsa-ex200-v10-lab
+# [ ] comando lab funcionando
+
+# SERVERA:
+# [ ] servera.lab.test
+# [ ] 192.168.100.11
+# [ ] SELinux Enforcing
+# [ ] firewalld ativo
+# [ ] sshd ativo
+# [ ] student + sudo NOPASSWD
+# [ ] vda sistema
+# [ ] vdb 5G
+# [ ] vdc 5G
+# [ ] vdd 3G
+# [ ] vde 2G
+
+# SERVERB:
+# [ ] serverb.lab.test
+# [ ] 192.168.100.12
+# [ ] SELinux Enforcing
+# [ ] firewalld ativo
+# [ ] sshd ativo
+# [ ] student + sudo NOPASSWD
+# [ ] vda sistema
+# [ ] vdb 5G
+# [ ] vdc 3G
+
+# VALIDACAO FINAL:
+# [ ] ssh servera hostname -f
+# [ ] ssh serverb hostname -f
+# [ ] ansible all -m ansible.builtin.ping
+# [ ] ansible-playbook playbooks/validate.yml
+# [ ] bootstrap/20-install-dependencies.sh
+# [ ] lab status
+# [ ] lab list
+# [ ] lab show obj01-01
+
+
+# ==============================================================
+# ATALHO OPERACIONAL DEPOIS QUE O AMBIENTE JA ESTIVER PRONTO
+# ==============================================================
+
+# No host KVM:
+
+sudo virsh start bastion 2>/dev/null || true
+sudo virsh start servera 2>/dev/null || true
+sudo virsh start serverb 2>/dev/null || true
+sudo virsh list
+
+# No bastion:
+
+cd ~/rhcsa-ex200-v10-lab
+git pull --ff-only
+
+lab status
+lab list
+lab show obj01-01
+
+# Começar:
+
+lab start obj01-01
+
+
+# ==============================================================
+# OBSERVACOES IMPORTANTES
+# ==============================================================
+
+# - O host KVM é infraestrutura fora de banda.
+#   Não use o bastion para controlar snapshots/libvirt do host.
+
+# - bastion é o Control Plane.
+#   Não pratique exercícios destrutivos nele.
+
+# - servera e serverb são os nós descartáveis de estudo.
+
+# - /dev/vda é o disco de sistema e deve ser protegido.
+
+# - Os discos extras existem para exercícios de storage.
+
+# - Não desabilite SELinux.
+
+# - Não desabilite firewalld para contornar falhas.
+
+# - Não use StrictHostKeyChecking=no como correção permanente.
+
+# - A chave SSH privada deve permanecer apenas no bastion.
+
+# - Não envie senhas, chaves privadas, tokens ou
+#   credenciais RHSM ao repositório Git.
+
+# - Antes de cada sessão de estudo:
+#     cd ~/rhcsa-ex200-v10-lab
+#     git pull --ff-only
+#     lab status
+
+# - Fluxo normal de estudo:
+#     lab show ID
+#     lab start ID
+#     resolver manualmente
+#     lab grade
+#     lab finish
+
+# ==============================================================
+# FIM
+# ==============================================================

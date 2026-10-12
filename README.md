@@ -762,3 +762,12 @@ Automação para preparar e avaliar.
 Administração Linux para ser praticada de verdade.
 
 </div>
+
+## Manual de execução dos laboratórios
+
+Consulte o guia operacional do aluno para aprender a acessar,
+iniciar, executar, avaliar e finalizar os laboratórios RHCSA EX200,
+sem consultar as soluções dos exercícios.
+
+**[Acessar o Manual de Execução dos Laboratórios](z_guia-do-aluno/RHCSA-EX200-v10-Manual%20de%20execucao%20Laboratorios_.md)**
+
